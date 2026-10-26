@@ -22,7 +22,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
     pygame.draw.rect(tela, (179, 128, 0), (0, 400, 800, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
     pygame.draw.rect(tela, (255, 0, 0), (300, y, 2,20))
     pygame.draw.rect(tela, (255, 0, 0), (200, y + 25, 2,20))
-    y += 3  # Faz o disparo do ceu começar a cair
+    y += 3.5  # Faz o disparo do ceu começar a cair
     if y >= 400: # Quando encosta no chao, ele volta para cima
         y = 0
 
