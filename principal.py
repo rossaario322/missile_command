@@ -12,12 +12,17 @@ y = 0
 y_disparo = randint(30, 440) # Posição do disparo no eixo y
 x_disparo = randint(50, 600) # Posição do disparo no eixo x
 
+fonte = pygame.font.SysFont("arial", 40, True, True) # Fonte do texto (arial, tamanho 40, negrito, italico)
+pontos = 0 # Total de pontos
+
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
 
 clock = pygame.time.Clock() # Confirgurando os fps
 
 while True:  # O loop que deixa o jogo rodando para sempre
     tela.fill((0,0,0))
+    mensagem = f"Pontos: {pontos}"
+    texto_formatado = fonte.render(mensagem, True, (255, 0 , 0))
     for event in pygame.event.get():
         if event.type == QUIT: # Se clicar em sair você sai
             pygame.quit()
@@ -47,8 +52,9 @@ while True:  # O loop que deixa o jogo rodando para sempre
     if disparo1.colliderect(chao) or disparo2.colliderect(chao): # Se o disparo encostar na casa, ele printa "Colidiu"
         x_disparo = randint(50, 600)
         y_disparo = randint(30, 440)
+        pontos = pontos + 1
         print("Colidiu")
-
+    tela.blit(texto_formatado, (450, 40))
 
     pygame.display.update() # Usado para atualizar novas coisas
     clock.tick(20) # Quantidade de FPS
