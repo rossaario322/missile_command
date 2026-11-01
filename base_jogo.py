@@ -13,7 +13,7 @@ tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
 
 clock = pygame.time.Clock() # Confirgurando os fps
 
-class Casa(pygame.sprite.Sprite):
+class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sprite, que é um objeto que pode ser desenhado na tela
     def __init__(self, posicao, imagem):
         pygame.sprite.Sprite.__init__(self)
         self.sprites = []
@@ -23,6 +23,12 @@ class Casa(pygame.sprite.Sprite):
         self.image = pygame.transform.scale(self.image, (30, 30))
         self.rect = self.image.get_rect()
         self.rect.topleft = posicao
+        self.viva = True
+
+    def destruir(self): # Quando a casa é destruida, ela muda a imagem para a quebrada e muda o estado para falsa
+        self.image = self.sprites[1]
+        self.image = pygame.transform.scale(self.image, (30, 30))
+        self.viva = False
 
 
 posicoes_fixas = [
@@ -34,15 +40,12 @@ posicoes_fixas = [
     (680, 370)
 ]
 
-
 todas_as_casas = pygame.sprite.Group() # Criando um grupo de sprites
 
 
-
-for pos in posicoes_fixas:
+for pos in posicoes_fixas: #Roda todas as casas e cria uma nova casa em cada posição, adicionando ao grupo de sprites
     nova_casa = Casa(pos, "img/cidade.png")
     todas_as_casas.add(nova_casa)
-
 
 
 
@@ -52,9 +55,13 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if event.type == QUIT: # Se clicar em sair você sai
             pygame.quit()
             exit()
-        # if event.type == MOUSEBUTTONUP: # Quando clica na tela, o y volta um pouco pra cima
-        #     if event.button == 1:
-        #         y = y + 20
+        if event.type == MOUSEBUTTONUP: # Quando clica em uma casa, ela é destruida
+            if event.button == 1:
+                for Casa in todas_as_casas:
+                    if Casa.rect.collidepoint(event.pos):  # Capta onde você clicou e verifica se é uma casa, se é, ela é destruida atualizando para a imagem quebrada
+                        Casa.destruir()
+                        print("Casa destruida")
+                        
                 
     todas_as_casas.draw(tela) # Desenhando a casa na tela
 
