@@ -109,12 +109,32 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
             self.chegou = True
 
 class Missil:
-    def __init__(self, origemX, origemY, destinoX, destinoY):
-        pygame.draw.rect(tela, (179, 128, 0), (origemX, origemY, 10, 10))
+    def __init__(self, origemX, origemY, destinoX, destinoY, velocidade):
         self.origemX = origemX
         self.origemY = origemY
         self.destinoX = destinoX
-        self.destinoY = destinoY 
+        self.destinoY = destinoY
+        self.velocidade = velocidade
+        
+        
+        
+    def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado 
+        dx = self.destinoX - self.origemX
+        dy = self.destinoY - self.origemY
+        
+        distancia = math.hypot(dx,dy)
+    
+        if distancia > 0:
+            if distancia <= self.velocidade:
+                self.origemX = self.destinoX
+                self.origemY = self.destinoY
+            else:
+                direcaoX = dx/distancia
+                direcaoY = dy/distancia    
+                self.origemX += direcaoX*self.velocidade
+                self.origemY += direcaoY*self.velocidade
+            
+        pygame.draw.rect(tela, ("red"), (self.origemX, self.origemY, 10, 10))    
 
 def chao():
     pygame.draw.rect(tela, (179, 128, 0), (-40, 400, 860, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
@@ -146,6 +166,7 @@ for pos in posicoes_fixas: #Roda todas as casas e cria uma nova casa em cada pos
     nova_casa = Casa(pos, "img/cidade.png")
     grupo_casas.add(nova_casa)
 
+m = Missil(0, 0, 200, 200, 3)
 
 while True:  # O loop que deixa o jogo rodando para sempre
     tela.fill((0,0,0)) # Tela preta
@@ -168,9 +189,9 @@ while True:  # O loop que deixa o jogo rodando para sempre
      
 
     chao() # Puxa a função que faz o ambiente do mapa
-    m = Missil(0, 0, 0, 0)
     grupo_explosoes.update() # Atualiza as duas classes
     grupo_projeteis.update()
+    m.update()
 
     grupo_explosoes.draw(tela) # Desenha tudo na tela
     grupo_casas.draw(tela)
