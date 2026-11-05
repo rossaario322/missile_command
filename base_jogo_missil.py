@@ -3,7 +3,7 @@ import pygame # Pygame, atalhos do pygame, função de sair e math (raiz quadrad
 from pygame.locals import * 
 from sys import exit
 import math
-
+import random
 
 
 pygame.init() # Dependencia obrigatoria
@@ -109,11 +109,11 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
             self.chegou = True
 
 class Missil:
-    def __init__(self, origemX, origemY, destinoX, destinoY, velocidade):
+    def __init__(self, origemX, origemY, destino, velocidade):
         self.origemX = origemX
         self.origemY = origemY
-        self.destinoX = destinoX
-        self.destinoY = destinoY
+        self.destinoX = destino[0]
+        self.destinoY = destino[1]
         self.velocidade = velocidade
         
         
@@ -166,7 +166,8 @@ for pos in posicoes_fixas: #Roda todas as casas e cria uma nova casa em cada pos
     nova_casa = Casa(pos, "img/cidade.png")
     grupo_casas.add(nova_casa)
 
-m = Missil(0, 0, 200, 200, 3)
+m = Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)
+m1 = Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)
 
 while True:  # O loop que deixa o jogo rodando para sempre
     tela.fill((0,0,0)) # Tela preta
@@ -192,6 +193,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
     grupo_explosoes.update() # Atualiza as duas classes
     grupo_projeteis.update()
     m.update()
+    m1.update()
 
     grupo_explosoes.draw(tela) # Desenha tudo na tela
     grupo_casas.draw(tela)
