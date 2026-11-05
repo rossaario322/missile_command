@@ -37,7 +37,7 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
         self.image = pygame.transform.scale(self.image, (30, 30)) # Define o tamanho igual
         self.viva = False # Define a caracteristica "False" para um sprite com a casa destruida
 
-class Explosion(pygame.sprite.Sprite): # Classe feita para realizar a explosão no jogo
+class Explosao(pygame.sprite.Sprite): # Classe feita para realizar a explosão no jogo
 	def __init__(self, x, y):
 		pygame.sprite.Sprite.__init__(self)
 		self.images = []
@@ -53,15 +53,15 @@ class Explosion(pygame.sprite.Sprite): # Classe feita para realizar a explosão 
 		self.raio = 40 
 
 	def update(self): # Uma função criada para trocar entre os 5 sprites da explosao"
-		explosion_speed = 4
+		velocidade_explosao = 4
 		self.counter += 1
 
-		if self.counter >= explosion_speed and self.index < len(self.images) - 1:
+		if self.counter >= velocidade_explosao and self.index < len(self.images) - 1:
 			self.counter = 0
 			self.index += 1
 			self.image = self.images[self.index]
 		
-		if self.index >= len(self.images) - 1 and self.counter >= explosion_speed: # Animacao terminou: remove a explosao
+		if self.index >= len(self.images) - 1 and self.counter >= velocidade_explosao: # Animacao terminou: remove a explosao
 			self.kill()
 
 	def atinge(self, x, y): # Uma função feita para se ter a colisão da explosão
@@ -221,7 +221,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
         for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
             if p.chegou:
-                grupo_explosoes.add(Explosion(p.destino[0], p.destino[1]))
+                grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
                 p.kill()
 
 
