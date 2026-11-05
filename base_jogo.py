@@ -4,18 +4,21 @@ from pygame.locals import *
 from sys import exit
 import math
 
-
-
 pygame.init() # Dependencia obrigatoria
+
+# ==================== VARIÁVEIS ====================
 
 largura = 820 # Define variaveis que são usadas depois
 altura = 480
 municao = 10
-
+hora_sem_municao = 0 # Variavel que guarda quando não tem munição
+fonte = pygame.font.SysFont("arial", 24, True) # Fonte pra escrever (arial, tamanho 24, negrito)
+estado = "menu" # Define o estado do jogo, que começa no menu
 
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
-
 clock = pygame.time.Clock() # Confirgurando os fps
+
+# ==================== CLASSES ====================
 
 class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sprite, que é um objeto que pode ser desenhado na tela
     def __init__(self, posicao, imagem): #
@@ -108,6 +111,24 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
         if falta <= self.velocidade:
             self.chegou = True
 
+class Botao(): # Classe feita para criar os botoes do menu
+    def __init__(self,x,y,imagem):
+        self.image = imagem
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x,y)
+        
+    def desenho(self): # Desenha o botão na tela
+        tela.blit(self.image, (self.rect.x, self.rect.y))
+
+    def clicado(self, pos): # Verifica se o botão foi clicado
+        return self.rect.collidepoint(pos)
+
+
+botao_jogar = Botao(300, 100, pygame.image.load("img/botao_jogar.png")) # Botão de start
+botao_lederbord = Botao(260, 200, pygame.image.load("img/botao_leaderboard.png")) # Botão de leaderboard
+botao_sair = Botao(300, 300, pygame.image.load("img/botao_sair.png")) # Botão de sair
+
+# ==================== ELEMENTOS DO MAPA ====================
 def chao():
     pygame.draw.rect(tela, (179, 128, 0), (-40, 400, 860, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
     pygame.draw.rect(tela, (179, 128, 0), (-10, 365, 50, 50)) # Blocos dos lados 
@@ -115,6 +136,8 @@ def chao():
     torre_do_meio1 = pygame.draw.rect(tela, (179, 128, 0), (350, 390, 100, 20)) # Os 3 para a torre do meio
     torre_do_meio2 = pygame.draw.rect(tela, (179, 128, 0), (365, 380, 70, 20)) 
     torre_do_meio3 = pygame.draw.rect(tela, (179, 128, 0), (380, 370, 40, 20)) 
+
+# ==================== POSIÇÕES E O RANKING ====================
 
 posicoes_fixas = [ # A posição das casas
     (100, 370),
@@ -125,12 +148,19 @@ posicoes_fixas = [ # A posição das casas
     (680, 370)
 ]
 
+ranking = [    # A leaderboard é uma lista de tuplas, cada tupla tem o nome do jogador e a pontuação
+    {"nome": "Victor", "pontos": 1200},
+    {"nome": "Parceiro", "pontos": 900},
+    {"nome": "Amigo", "pontos": 800},
+]
+
+# ==================== GRUPOS DE SPRITES ====================
+
 grupo_casas = pygame.sprite.Group() # Grupo das casas 
 grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
 
-fonte = pygame.font.SysFont("arial", 24, True) # Fonte pra escrever (arial, tamanho 24, negrito)
-hora_sem_municao = 0 # Variavel que guarda quando não tem munição
+# ==================== LOOP PRINCIPAL ====================
 
 
 
@@ -145,50 +175,89 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if event.type == QUIT: # Se clicar em sair você sai
             pygame.quit()
             exit()
-        if event.type == MOUSEBUTTONUP: 
-            if event.button == 1:
-                for casa in grupo_casas:
-                    if casa.rect.collidepoint(event.pos):  # Capta onde você clicou e verifica se é uma casa, se é, ela é destruida atualizando para a imagem quebrada
-                        casa.destruir()
-                        print("Casa destruida")
+
+        if estado == "menu": # No menu, o clique só serve pro botão
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                if botao_jogar.clicado(event.pos): # Se clicar no botão de jogar, muda o estado para jogando
+                    estado = "jogando"
+                if botao_lederbord.clicado(event.pos): # Se clicar no botão de leaderboard, muda o estado para leaderboard
+                    estado = "leaderboard"
+                if botao_sair.clicado(event.pos): # Se clicar no botão de sair, sai do jogo
+                    pygame.quit()
+                    exit()
+
+        elif estado == "jogando": # Jogando, o clique atira
+            if event.type == MOUSEBUTTONUP and event.button == 1:
                 if municao > 0: # Cada tiro gasta 1 de munição
                     grupo_projeteis.add(Projetil(event.pos))
                     municao -= 1
                     if municao == 0: # Quando a última bala é gasta, anota a hora. É aqui que o cronômetro começa.
                         hora_sem_municao = pygame.time.get_ticks()
-                
-     
-
-    chao() # Puxa a função que faz o ambiente do mapa
-    grupo_explosoes.update() # Atualiza as duas classes
-    grupo_projeteis.update()
-
-    grupo_explosoes.draw(tela) # Desenha tudo na tela
-    grupo_casas.draw(tela)
-    grupo_projeteis.draw(tela)
+            if event.type == KEYDOWN and event.key == K_ESCAPE:
+                estado = "pausado"
+        elif estado == "leaderboard":          # aqui
+            if event.type == KEYDOWN and event.key == K_ESCAPE:
+                estado = "menu"
+        elif estado == "pausado":
+            if event.type == KEYDOWN and event.key == K_ESCAPE:
+                estado = "jogando"
 
 
-    for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
-        if p.chegou:
-            grupo_explosoes.add(Explosion(p.destino[0], p.destino[1]))
-            p.kill()
+    if estado == "menu": # Se está no menu, desenha os botoes na tela
+        botao_jogar.desenho()
+        botao_lederbord.desenho()
+        botao_sair.desenho()
+
+    elif estado == "jogando": # Todo o resto do código é o que acontece quando está jogando
+
+        chao() # Puxa a função que faz o ambiente do mapa
+        grupo_explosoes.update() # Atualiza as duas classes
+        grupo_projeteis.update()
+
+        grupo_explosoes.draw(tela) # Desenha tudo na tela
+        grupo_casas.draw(tela)
+        grupo_projeteis.draw(tela)
 
 
-    if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
-        municao = 10
+        for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
+            if p.chegou:
+                grupo_explosoes.add(Explosion(p.destino[0], p.destino[1]))
+                p.kill()
 
 
-    texto = fonte.render(str(municao), True, (0, 0, 0)) # Desenham o numero de munição embaixo da torre
-    texto_rect = texto.get_rect(center=(400, 425))
-    tela.blit(texto, texto_rect)
-
-    if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
-        aviso = fonte.render("OUT", True, (255, 0, 0))
-        aviso_rect = aviso.get_rect(center=(400, 450))
-        tela.blit(aviso, aviso_rect)
+        if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
+            municao = 10
 
 
-   
-    
+        texto = fonte.render(str(municao), True, (0, 0, 0)) # Desenham o numero de munição embaixo da torre
+        texto_rect = texto.get_rect(center=(400, 425))
+        tela.blit(texto, texto_rect)
+
+        if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
+            aviso = fonte.render("OUT", True, (255, 0, 0))
+            aviso_rect = aviso.get_rect(center=(400, 450))
+            tela.blit(aviso, aviso_rect)
+
+    elif estado == "leaderboard": # Se o estado for leaderboard, desenha o ranking na tela
+        titulo = fonte.render("LEADERBOARD", True, (255, 0, 0))
+        tela.blit(titulo, titulo.get_rect(center=(410, 80)))
+
+        y = 150
+        posicao = 1
+        for jogador in ranking:   # cada jogador é um dicionário, ex.: {"nome": "Victor", "pontos": 1200}
+            linha = fonte.render(f"{posicao}. {jogador['nome']}   {jogador['pontos']}", True, (255, 255, 255))
+            tela.blit(linha, linha.get_rect(center=(410, y)))
+            y += 40
+            posicao += 1
+
+        dica = fonte.render("ESC para voltar", True, (150, 150, 150))
+        tela.blit(dica, dica.get_rect(center=(410, 420)))
+
+    elif estado == "pausado": # Se o jogo estiver pausado, desenha o texto de pausa e fica em uma tela que so é possivel sair apertando ESC
+        pausa_texto = fonte.render("PAUSADO", True, (255, 255, 0))
+        tela.blit(pausa_texto, pausa_texto.get_rect(center=(410, 240)))
+        dica = fonte.render("ESC para voltar", True, (150, 150, 150))
+        tela.blit(dica, dica.get_rect(center=(410, 280)))
+        
     pygame.display.update() # Usado para atualizar novas coisas
     clock.tick(40) # Quantidade de FPS
