@@ -1,8 +1,9 @@
 
-import pygame # Pygame, atalhos do pygame, função de sair e math (raiz quadrada)
+import pygame # Pygame, atalhos do pygame, função de sair, math (raiz quadrada), e requests (para pegar a API do clima)
 from pygame.locals import * 
 from sys import exit
 import math
+import requests
 
 pygame.init() # Dependencia obrigatoria
 
@@ -32,10 +33,32 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
         self.rect.topleft = posicao # Serve para posicionar os sprites pegando-os pela esquerda superior e coloca-los na variavel "posicao"
         self.viva = True # Define a caracteristica "True" para um sprite com a casa viva
 
-    def destruir(self): # Quando a casa é destruida, ela muda a imagem para a quebrada e muda o estado para falsa
-        self.image = self.sprites[1] # Troca para o sprite da casa destruida
-        self.image = pygame.transform.scale(self.image, (30, 30)) # Define o tamanho igual
-        self.viva = False # Define a caracteristica "False" para um sprite com a casa destruida
+        self.quadros_explosao = [] # Salva as imagens da explosão em uma lista, para depois fazer a animação
+        for num in range(1, 7):
+            self.quadros_explosao.append(pygame.image.load(f"img/cidade_exp{num}.png"))
+        self.explodindo = False
+        self.index = 0
+        self.counter = 0
+
+    def destruir(self):
+        if self.viva:               
+            self.viva = False
+            self.explodindo = True
+            self.index = 0
+            self.counter = 0
+
+    def update(self): # Para a ficar trocando a imagem da casa para a de cidade quebrada, e para a animação da explosão
+        if self.explodindo:
+            self.counter += 1
+            if self.counter >= 5:                  
+                self.counter = 0
+                base = self.rect.midbottom          
+                self.image = self.quadros_explosao[self.index]
+                self.rect = self.image.get_rect()
+                self.rect.midbottom = base          
+                self.index += 1
+                if self.index >= len(self.quadros_explosao):
+                    self.explodindo = False         
 
 class Explosao(pygame.sprite.Sprite): # Classe feita para realizar a explosão no jogo
 	def __init__(self, x, y):
@@ -128,6 +151,15 @@ botao_jogar = Botao(300, 100, pygame.image.load("img/botao_jogar.png")) # Botão
 botao_lederbord = Botao(260, 200, pygame.image.load("img/botao_leaderboard.png")) # Botão de leaderboard
 botao_sair = Botao(300, 300, pygame.image.load("img/botao_sair.png")) # Botão de sair
 
+img_nuvem = pygame.image.load("img/nuvem.png").convert_alpha() # As imagens da nuvem e das estrelas do mapa
+img_estrela = pygame.image.load("img/estrela.png").convert_alpha()
+img_estrela_pequena = pygame.image.load("img/estrela_pequena.png").convert_alpha()
+
+
+
+
+estrelas_grandes = [(150, 60), (480, 40), (620, 150)] # Posições das estrelas grandes e pequenas, para desenhar no mapa
+estrelas_pequenas = [(60, 120), (260, 30), (330, 140), (420, 90), (560, 200), (760, 60), (210, 210)]
 # ==================== ELEMENTOS DO MAPA ====================
 def chao():
     pygame.draw.rect(tela, (179, 128, 0), (-40, 400, 860, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
@@ -137,6 +169,35 @@ def chao():
     torre_do_meio2 = pygame.draw.rect(tela, (179, 128, 0), (365, 380, 70, 20)) 
     torre_do_meio3 = pygame.draw.rect(tela, (179, 128, 0), (380, 370, 40, 20)) 
 
+
+def buscar_clima(): # Consulta a API do clima e devolve se é dia e a temperatura de Curitiba
+    url = "https://api.open-meteo.com/v1/forecast?latitude=-25.43&longitude=-49.27&current=temperature_2m,is_day"
+    try: # Aqui uma tentativa de pegar os dados da API, caso não consiga, cai no except e devolve dia e sem temperatura
+        resposta = requests.get(url, timeout=3)
+        dados = resposta.json()
+        dia = dados["current"]["is_day"]
+        temperatura = dados["current"]["temperature_2m"]
+        return dia, temperatura
+    except requests.exceptions.RequestException: # Sem internet ou API fora do ar: usa dia e sem temperatura
+        return 1, None
+
+def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
+    if dia == 1:
+        tela.fill((90, 160, 230))                                # Céu azul
+        pygame.draw.circle(tela, (255, 220, 60), (700, 80), 35)  # Sol
+        tela.blit(img_nuvem, (80, 50)) #Nuvens
+        
+    else:
+        tela.fill((0, 0, 0))                                     # Céu preto
+        pygame.draw.circle(tela, (220, 220, 220), (700, 80), 30) # Lua
+
+        for pos in estrelas_grandes: # Estrelas 
+            tela.blit(img_estrela, pos)
+
+        for pos in estrelas_pequenas: # Estrelas pequenas
+            tela.blit(img_estrela_pequena, pos)
+
+dia, temperatura = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 # ==================== POSIÇÕES E O RANKING ====================
 
 posicoes_fixas = [ # A posição das casas
@@ -155,7 +216,6 @@ ranking = [    # A leaderboard é uma lista de tuplas, cada tupla tem o nome do 
 ]
 
 # ==================== GRUPOS DE SPRITES ====================
-
 grupo_casas = pygame.sprite.Group() # Grupo das casas 
 grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
@@ -164,7 +224,7 @@ grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
 
 
 
-for pos in posicoes_fixas: #Roda todas as casas e cria uma nova casa em cada posição, adicionando ao grupo de sprites
+for pos in posicoes_fixas: # Roda todas as casas e cria uma nova casa em cada posição, adicionando ao grupo de sprites
     nova_casa = Casa(pos, "img/cidade.png")
     grupo_casas.add(nova_casa)
 
@@ -188,6 +248,10 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
         elif estado == "jogando": # Jogando, o clique atira
             if event.type == MOUSEBUTTONUP and event.button == 1:
+                for casa in grupo_casas:                     # passa por cada casa
+                    if casa.rect.collidepoint(event.pos):    # o clique foi em cima dela?
+                        casa.destruir()  
+
                 if municao > 0: # Cada tiro gasta 1 de munição
                     grupo_projeteis.add(Projetil(event.pos))
                     municao -= 1
@@ -209,10 +273,12 @@ while True:  # O loop que deixa o jogo rodando para sempre
         botao_sair.desenho()
 
     elif estado == "jogando": # Todo o resto do código é o que acontece quando está jogando
-
+        
+        desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
         chao() # Puxa a função que faz o ambiente do mapa
         grupo_explosoes.update() # Atualiza as duas classes
         grupo_projeteis.update()
+        grupo_casas.update()
 
         grupo_explosoes.draw(tela) # Desenha tudo na tela
         grupo_casas.draw(tela)
@@ -237,6 +303,11 @@ while True:  # O loop que deixa o jogo rodando para sempre
             aviso = fonte.render("OUT", True, (255, 0, 0))
             aviso_rect = aviso.get_rect(center=(400, 450))
             tela.blit(aviso, aviso_rect)
+
+        if temperatura is not None:
+            clima = fonte.render(f"Curitiba: {temperatura}°C", True, (255, 255, 255))
+            tela.blit(clima, (20, 20))
+
 
     elif estado == "leaderboard": # Se o estado for leaderboard, desenha o ranking na tela
         titulo = fonte.render("LEADERBOARD", True, (255, 0, 0))
