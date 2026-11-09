@@ -108,8 +108,14 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
         if falta <= self.velocidade:
             self.chegou = True
 
-class Missil:
+class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
     def __init__(self, origemX, origemY, destino, velocidade):
+        super().__init__() #garante que a classe mãe seja "vista"
+        
+        self.image = pygame.Surface((10, 10))
+        self.image.fill("red")
+        self.rect = self.image.get_rect()
+        
         self.origemX = origemX
         self.origemY = origemY
         self.destinoX = destino[0]
@@ -128,6 +134,7 @@ class Missil:
             if distancia <= self.velocidade:
                 self.origemX = self.destinoX
                 self.origemY = self.destinoY
+                self.kill() 
             else:
                 direcaoX = dx/distancia
                 direcaoY = dy/distancia    
@@ -156,6 +163,7 @@ posicoes_fixas = [ # A posição das casas
 grupo_casas = pygame.sprite.Group() # Grupo das casas 
 grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
+grupo_misseis = pygame.sprite.Group() #grupo dos misseis 
 
 fonte = pygame.font.SysFont("arial", 24, True) # Fonte pra escrever (arial, tamanho 24, negrito)
 hora_sem_municao = 0 # Variavel que guarda quando não tem munição
