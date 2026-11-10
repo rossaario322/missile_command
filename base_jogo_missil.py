@@ -122,7 +122,7 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
         self.destinoY = destino[1]
         self.velocidade = velocidade
         
-        
+        self.rect.center = (self.origemX, self.origemY)
         
     def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado 
         dx = self.destinoX - self.origemX
@@ -141,7 +141,7 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
                 self.origemX += direcaoX*self.velocidade
                 self.origemY += direcaoY*self.velocidade
             
-        pygame.draw.rect(tela, ("red"), (self.origemX, self.origemY, 10, 10))    
+        self.rect.center = (int(self.origemX), int(self.origemY))
 
 def chao():
     pygame.draw.rect(tela, (179, 128, 0), (-40, 400, 860, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
@@ -174,8 +174,8 @@ for pos in posicoes_fixas: #Roda todas as casas e cria uma nova casa em cada pos
     nova_casa = Casa(pos, "img/cidade.png")
     grupo_casas.add(nova_casa)
 
-m = Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)
-m1 = Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)
+grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)) #testando a geração e colisão dos misseis
+grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3))
 
 while True:  # O loop que deixa o jogo rodando para sempre
     tela.fill((0,0,0)) # Tela preta
@@ -200,12 +200,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
     chao() # Puxa a função que faz o ambiente do mapa
     grupo_explosoes.update() # Atualiza as duas classes
     grupo_projeteis.update()
-    m.update()
-    m1.update()
-
-    grupo_explosoes.draw(tela) # Desenha tudo na tela
-    grupo_casas.draw(tela)
-    grupo_projeteis.draw(tela)
+    grupo_misseis.update()
 
 
     for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
@@ -213,6 +208,16 @@ while True:  # O loop que deixa o jogo rodando para sempre
             grupo_explosoes.add(Explosion(p.destino[0], p.destino[1]))
             p.kill()
 
+    for explosao in grupo_explosoes:
+        for missil in grupo_misseis:
+            if explosao.atinge(missil.rect.centerx, missil.rect.centery):
+                missil.kill()
+    
+    colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False)
+    for missil_atingiu, casas_atingidas in colisoes.items():
+        for casa in casas_atingidas:
+            if casa.viva: 
+                casa.destruir()
 
     if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
         municao = 10
@@ -221,6 +226,12 @@ while True:  # O loop que deixa o jogo rodando para sempre
     texto = fonte.render(str(municao), True, (0, 0, 0)) # Desenham o numero de munição embaixo da torre
     texto_rect = texto.get_rect(center=(400, 425))
     tela.blit(texto, texto_rect)
+    
+    chao() 
+    grupo_casas.draw(tela)
+    grupo_misseis.draw(tela) # Desenha os mísseis caindo
+    grupo_projeteis.draw(tela)
+    grupo_explosoes.draw(tela)
 
     if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
         aviso = fonte.render("OUT", True, (255, 0, 0))
