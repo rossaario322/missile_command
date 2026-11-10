@@ -4,6 +4,7 @@ from pygame.locals import *
 from sys import exit
 import math
 import requests
+import random
 
 pygame.init() # Dependencia obrigatoria
 
@@ -146,7 +147,40 @@ class Botao(): # Classe feita para criar os botoes do menu
     def clicado(self, pos): # Verifica se o botão foi clicado
         return self.rect.collidepoint(pos)
 
-
+class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
+    def __init__(self, origemX, origemY, destino, velocidade):
+        super().__init__() #garante que a classe mãe seja "vista"
+        
+        self.image = pygame.Surface((10, 10))
+        self.image.fill("red")
+        self.rect = self.image.get_rect()
+        
+        self.origemX = origemX
+        self.origemY = origemY
+        self.destinoX = destino[0]
+        self.destinoY = destino[1]
+        self.velocidade = velocidade
+        
+        self.rect.center = (self.origemX, self.origemY)
+        
+    def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado 
+        dx = self.destinoX - self.origemX
+        dy = self.destinoY - self.origemY
+        
+        distancia = math.hypot(dx,dy)
+    
+        if distancia > 0:
+            if distancia <= self.velocidade:
+                self.origemX = self.destinoX
+                self.origemY = self.destinoY
+                self.kill() 
+            else:
+                direcaoX = dx/distancia
+                direcaoY = dy/distancia    
+                self.origemX += direcaoX*self.velocidade
+                self.origemY += direcaoY*self.velocidade
+            
+        self.rect.center = (int(self.origemX), int(self.origemY))
 botao_jogar = Botao(300, 100, pygame.image.load("img/botao_jogar.png")) # Botão de start
 botao_lederbord = Botao(260, 200, pygame.image.load("img/botao_leaderboard.png")) # Botão de leaderboard
 botao_sair = Botao(300, 300, pygame.image.load("img/botao_sair.png")) # Botão de sair
@@ -209,7 +243,7 @@ posicoes_fixas = [ # A posição das casas
     (680, 370)
 ]
 
-ranking = [    # A leaderboard é uma lista de tuplas, cada tupla tem o nome do jogador e a pontuação
+ranking = [    # A leaderboard é uma lista de dicionários, cada tupla tem o nome do jogador e a pontuação
     {"nome": "Victor", "pontos": 1200},
     {"nome": "Parceiro", "pontos": 900},
     {"nome": "Amigo", "pontos": 800},
@@ -219,9 +253,11 @@ ranking = [    # A leaderboard é uma lista de tuplas, cada tupla tem o nome do 
 grupo_casas = pygame.sprite.Group() # Grupo das casas 
 grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
-
+grupo_misseis = pygame.sprite.Group()
 # ==================== LOOP PRINCIPAL ====================
 
+grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)) #testando a geração e colisão dos misseis
+grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3))
 
 
 for pos in posicoes_fixas: # Roda todas as casas e cria uma nova casa em cada posição, adicionando ao grupo de sprites
@@ -248,9 +284,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
         elif estado == "jogando": # Jogando, o clique atira
             if event.type == MOUSEBUTTONUP and event.button == 1:
-                for casa in grupo_casas:                     # passa por cada casa
-                    if casa.rect.collidepoint(event.pos):    # o clique foi em cima dela?
-                        casa.destruir()  
+                
 
                 if municao > 0: # Cada tiro gasta 1 de munição
                     grupo_projeteis.add(Projetil(event.pos))
@@ -279,17 +313,29 @@ while True:  # O loop que deixa o jogo rodando para sempre
         grupo_explosoes.update() # Atualiza as duas classes
         grupo_projeteis.update()
         grupo_casas.update()
+        grupo_misseis.update()
 
-        grupo_explosoes.draw(tela) # Desenha tudo na tela
+         # Desenha tudo na tela
         grupo_casas.draw(tela)
         grupo_projeteis.draw(tela)
-
+        grupo_misseis.draw(tela)
+        grupo_explosoes.draw(tela)
 
         for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
             if p.chegou:
                 grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
                 p.kill()
 
+        for explosao in grupo_explosoes:
+                for missil in grupo_misseis:
+                    if explosao.atinge(missil.rect.centerx, missil.rect.centery):
+                        missil.kill()
+            
+        colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False)
+        for missil_atingiu, casas_atingidas in colisoes.items():
+            for casa in casas_atingidas:
+                if casa.viva: 
+                    casa.destruir()
 
         if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
             municao = 10
