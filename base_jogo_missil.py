@@ -174,8 +174,14 @@ for pos in posicoes_fixas: #Roda todas as casas e cria uma nova casa em cada pos
     nova_casa = Casa(pos, "img/cidade.png")
     grupo_casas.add(nova_casa)
 
-grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)) #testando a geração e colisão dos misseis
-grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3))
+ondaAtual = 1
+misseisRestantes = 5 # misseis que ainda tem na onda
+misseisVelocidade = 2
+SpawnTime = 1000 #tempo entre o nascimento de um missil e outro em milisegundos
+ultimoSpawn = pygame.time.get_ticks() #momento exato em que o ultimo missil nasceu
+esperandoProximaOnda = False #status do tempo de espera entre as onda para se preparar
+tempoEspera = 0 #tempo de esperar entre uma onda e outra
+
 
 while True:  # O loop que deixa o jogo rodando para sempre
     tela.fill((0,0,0)) # Tela preta
@@ -233,13 +239,40 @@ while True:  # O loop que deixa o jogo rodando para sempre
     grupo_projeteis.draw(tela)
     grupo_explosoes.draw(tela)
 
+    
     if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
         aviso = fonte.render("OUT", True, (255, 0, 0))
         aviso_rect = aviso.get_rect(center=(400, 450))
         tela.blit(aviso, aviso_rect)
 
-
-   
+    tempoAtual = pygame.time.get_ticks() #variavel que salva o tempo atual
+    if misseisRestantes > 0:
+        if tempoAtual - ultimoSpawn >= SpawnTime: # verifica se ja passou o tempo entre misseis
+            
+            origemX = random.randint(0, largura)
+            destino = random.choice(posicoes_fixas) 
+            
+            novoMissil = Missil(origemX, 0, destino, misseisVelocidade)
+            grupo_misseis.add(novoMissil)
+            
+            misseisRestantes -= 1
+            ultimoSpawn = tempoAtual
+    
+    elif len(grupo_misseis) == 0  and misseisRestantes == 0 and not esperandoProximaOnda:
+        
+        esperandoProximaOnda = True
+        tempoEspera = tempoAtual
+    
+    elif esperandoProximaOnda and (tempoAtual -  tempoEspera) >= 3000:
+        
+        ondaAtual += 1 #soma o numero da wave
+        misseisRestantes = 5 + ondaAtual #aumenta em 1 o numero de inimigos a cada wave
+        
+        misseisVelocidade = 2 + (ondaAtual * 0.2) #aumenta a velocidade dos misseis a cada onda
+        
+        SpawnTime = max(500, 1500 - (ondaAtual * 50)) #diminui o tempo entre o nascimento de um missil e outro
+        
+        esperandoProximaOnda = False
     
     pygame.display.update() # Usado para atualizar novas coisas
     clock.tick(40) # Quantidade de FPS
