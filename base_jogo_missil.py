@@ -244,7 +244,15 @@ while True:  # O loop que deixa o jogo rodando para sempre
         aviso = fonte.render("OUT", True, (255, 0, 0))
         aviso_rect = aviso.get_rect(center=(400, 450))
         tela.blit(aviso, aviso_rect)
-
+    
+    textoOndaAtual = fonte.render(f"Onda Atual: {ondaAtual}", True, (255, 255, 255))
+    tela.blit(textoOndaAtual, (10,10)) #posiciona o texto no canto superior esquerdo (x = 10, y = 10)
+    
+    if esperandoProximaOnda:
+        avisoEntreOndas = fonte.render(f"Onda {ondaAtual} concluída! Prepare-se!", True, (255, 255, 0))
+        avisoEntreOndasRect = avisoEntreOndas.get_rect(center = (largura // 2, altura //2 )) #// significa dividir por 1 valor inteiro, para não ter serrilhado nos pixels
+        tela.blit(avisoEntreOndas, avisoEntreOndasRect)
+    
     tempoAtual = pygame.time.get_ticks() #variavel que salva o tempo atual
     if misseisRestantes > 0:
         if tempoAtual - ultimoSpawn >= SpawnTime: # verifica se ja passou o tempo entre misseis
