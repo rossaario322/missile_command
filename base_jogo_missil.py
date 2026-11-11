@@ -118,6 +118,8 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
         
         self.origemX = origemX
         self.origemY = origemY
+        self.spawnX = origemX
+        self.spawnY = origemY
         self.destinoX = destino[0]
         self.destinoY = destino[1]
         self.velocidade = velocidade
@@ -232,6 +234,9 @@ while True:  # O loop que deixa o jogo rodando para sempre
     texto = fonte.render(str(municao), True, (0, 0, 0)) # Desenham o numero de munição embaixo da torre
     texto_rect = texto.get_rect(center=(400, 425))
     tela.blit(texto, texto_rect)
+    
+    for missil in grupo_misseis:
+        pygame.draw.line(tela, ("white"), (missil.spawnX, missil.spawnY), missil.rect.center, 2)
     
     chao() 
     grupo_casas.draw(tela)
