@@ -5,6 +5,7 @@ from sys import exit
 import math
 import requests
 import random
+import json
 
 pygame.init() # Dependencia obrigatoria
 
@@ -157,6 +158,8 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
         
         self.origemX = origemX
         self.origemY = origemY
+        self.spawnX = origemX   # guarda de onde ele saiu, pro rastro
+        self.spawnY = origemY
         self.destinoX = destino[0]
         self.destinoY = destino[1]
         self.velocidade = velocidade
@@ -219,7 +222,8 @@ def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
     if dia == 1:
         tela.fill((90, 160, 230))                                # Céu azul
         pygame.draw.circle(tela, (255, 220, 60), (700, 80), 35)  # Sol
-        tela.blit(img_nuvem, (80, 50)) #Nuvens
+        tela.blit(img_nuvem, (80, 90)) 
+        tela.blit(img_nuvem, (330, 40))#Nuvens
         
     else:
         tela.fill((0, 0, 0))                                     # Céu preto
@@ -230,6 +234,33 @@ def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
 
         for pos in estrelas_pequenas: # Estrelas pequenas
             tela.blit(img_estrela_pequena, pos)
+
+def carregar_ranking(): # Lê o ranking salvo no arquivo
+    try:
+        arquivo = open("ranking.json", "r")
+        ranking = json.load(arquivo)
+        arquivo.close()
+        return ranking
+    except FileNotFoundError: # Se o arquivo ainda não existe, começa com a lista vazia
+        return []
+
+def pegar_pontos(jogador): # Diz pro sort que é pra comparar pelos pontos
+    return jogador["pontos"]
+
+def salvar_pontuacao(nome, pontos): # Coloca a pontuação nova no ranking e salva no arquivo
+    ranking = carregar_ranking()
+    ranking.append({"nome": nome, "pontos": pontos})
+    ranking.sort(key=pegar_pontos, reverse=True) # Do maior pro menor
+
+    while len(ranking) > 10: # Deixa só os 10 melhores
+        ranking.pop()        # Tira o último da lista
+
+    arquivo = open("ranking.json", "w")
+    json.dump(ranking, arquivo)
+    arquivo.close()
+    return ranking
+
+
 
 dia, temperatura = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 # ==================== POSIÇÕES E O RANKING ====================
@@ -243,11 +274,7 @@ posicoes_fixas = [ # A posição das casas
     (680, 370)
 ]
 
-ranking = [    # A leaderboard é uma lista de dicionários, cada tupla tem o nome do jogador e a pontuação
-    {"nome": "Victor", "pontos": 1200},
-    {"nome": "Parceiro", "pontos": 900},
-    {"nome": "Amigo", "pontos": 800},
-]
+ranking = carregar_ranking()
 
 # ==================== GRUPOS DE SPRITES ====================
 grupo_casas = pygame.sprite.Group() # Grupo das casas 
@@ -256,13 +283,20 @@ grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
 grupo_misseis = pygame.sprite.Group()
 # ==================== LOOP PRINCIPAL ====================
 
-grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3)) #testando a geração e colisão dos misseis
-grupo_misseis.add(Missil(random.randint(0,820), 0, (random.choice(posicoes_fixas)), 3))
-
 
 for pos in posicoes_fixas: # Roda todas as casas e cria uma nova casa em cada posição, adicionando ao grupo de sprites
     nova_casa = Casa(pos, "img/cidade.png")
     grupo_casas.add(nova_casa)
+
+
+ondaAtual = 1
+misseisRestantes = 5
+misseisVelocidade = 2
+SpawnTime = 1000
+ultimoSpawn = pygame.time.get_ticks()
+esperandoProximaOnda = False
+tempoEspera = 0
+
 
 
 while True:  # O loop que deixa o jogo rodando para sempre
@@ -302,9 +336,11 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
 
     if estado == "menu": # Se está no menu, desenha os botoes na tela
+        desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
         botao_jogar.desenho()
         botao_lederbord.desenho()
         botao_sair.desenho()
+        
 
     elif estado == "jogando": # Todo o resto do código é o que acontece quando está jogando
         
@@ -314,6 +350,11 @@ while True:  # O loop que deixa o jogo rodando para sempre
         grupo_projeteis.update()
         grupo_casas.update()
         grupo_misseis.update()
+
+        for missil in grupo_misseis:
+            pygame.draw.line(tela, "white", (missil.spawnX, missil.spawnY), missil.rect.center, 2)
+
+
 
          # Desenha tudo na tela
         grupo_casas.draw(tela)
@@ -340,6 +381,44 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
             municao = 10
 
+        textoOndaAtual = fonte.render(f"Onda Atual: {ondaAtual}", True, (255, 255, 255))
+        tela.blit(textoOndaAtual, (20,50)) #posiciona o texto no canto superior esquerdo (x = 10, y = 10)
+            
+        if esperandoProximaOnda:
+                avisoEntreOndas = fonte.render(f"Onda {ondaAtual} concluída! Prepare-se!", True, (255, 255, 0))
+                avisoEntreOndasRect = avisoEntreOndas.get_rect(center = (largura // 2, altura //2 )) #// significa dividir por 1 valor inteiro, para não ter serrilhado nos pixels
+                tela.blit(avisoEntreOndas, avisoEntreOndasRect)
+            
+        tempoAtual = pygame.time.get_ticks() #variavel que salva o tempo atual
+        if misseisRestantes > 0:
+            if tempoAtual - ultimoSpawn >= SpawnTime: # verifica se ja passou o tempo entre misseis
+                    
+                    origemX = random.randint(0, largura)
+                    destino = random.choice(posicoes_fixas) 
+                    
+                    novoMissil = Missil(origemX, 0, destino, misseisVelocidade)
+                    grupo_misseis.add(novoMissil)
+                    
+                    misseisRestantes -= 1
+                    ultimoSpawn = tempoAtual
+            
+        elif len(grupo_misseis) == 0  and misseisRestantes == 0 and not esperandoProximaOnda:
+                
+                esperandoProximaOnda = True
+                tempoEspera = tempoAtual
+            
+        elif esperandoProximaOnda and (tempoAtual -  tempoEspera) >= 3000:
+                
+                ondaAtual += 1 #soma o numero da wave
+                misseisRestantes = 5 + ondaAtual #aumenta em 1 o numero de inimigos a cada wave
+                
+                misseisVelocidade = 2 + (ondaAtual * 0.2) #aumenta a velocidade dos misseis a cada onda
+                
+                SpawnTime = max(500, 1500 - (ondaAtual * 50)) #diminui o tempo entre o nascimento de um missil e outro
+                
+                esperandoProximaOnda = False
+
+
 
         texto = fonte.render(str(municao), True, (0, 0, 0)) # Desenham o numero de munição embaixo da torre
         texto_rect = texto.get_rect(center=(400, 425))
@@ -356,6 +435,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
 
     elif estado == "leaderboard": # Se o estado for leaderboard, desenha o ranking na tela
+        desenhar_ceu()
         titulo = fonte.render("LEADERBOARD", True, (255, 0, 0))
         tela.blit(titulo, titulo.get_rect(center=(410, 80)))
 
@@ -371,6 +451,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
         tela.blit(dica, dica.get_rect(center=(410, 420)))
 
     elif estado == "pausado": # Se o jogo estiver pausado, desenha o texto de pausa e fica em uma tela que so é possivel sair apertando ESC
+        desenhar_ceu()
         pausa_texto = fonte.render("PAUSADO", True, (255, 255, 0))
         tela.blit(pausa_texto, pausa_texto.get_rect(center=(410, 240)))
         dica = fonte.render("ESC para voltar", True, (150, 150, 150))
