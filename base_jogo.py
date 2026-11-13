@@ -184,6 +184,32 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
                 self.origemY += direcaoY*self.velocidade
             
         self.rect.center = (int(self.origemX), int(self.origemY))
+
+class Boss(pygame.sprite.Sprite): # Base dos dois bosses
+    def __init__(self, x, y, cor):
+        super().__init__()
+        self.image = pygame.Surface((60, 30)) # Retângulo provisório, depois troca por sprite
+        self.image.fill(cor)
+        self.rect = self.image.get_rect(center=(x, y))
+        self.vida = 3
+        self.invencivel_ate = 0 # Até que momento ele não toma dano
+
+    def levar_dano(self):
+        agora = pygame.time.get_ticks()
+        if agora < self.invencivel_ate: # Ainda invencível: ignora
+            return
+        self.vida -= 1
+        self.invencivel_ate = agora + 1000 # 1 segundo sem tomar dano
+        if self.vida <= 0:
+            self.kill()
+
+    def atirar(self): # Por padrão, boss não atira
+        return False
+
+
+
+
+
 botao_jogar = Botao(300, 100, pygame.image.load("img/botao_jogar.png")) # Botão de start
 botao_lederbord = Botao(260, 200, pygame.image.load("img/botao_leaderboard.png")) # Botão de leaderboard
 botao_sair = Botao(300, 300, pygame.image.load("img/botao_sair.png")) # Botão de sair
