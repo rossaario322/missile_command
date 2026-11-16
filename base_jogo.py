@@ -15,7 +15,7 @@ largura = 820 # Define variaveis que são usadas depois
 altura = 480
 municao = 10
 hora_sem_municao = 0 # Variavel que guarda quando não tem munição
-fonte = pygame.font.SysFont("arial", 24, True) # Fonte pra escrever (arial, tamanho 24, negrito)
+fonte = pygame.font.Font("fonts/PressStart2P.ttf", 16) # Fonte pra escrever (arial, tamanho 24, negrito)
 estado = "menu" # Define o estado do jogo, que começa no menu
 
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
@@ -30,9 +30,8 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
         self.sprites.append(pygame.image.load('img/cidade.png')) # Essa e a de baixo são as duas fotos da cidade
         self.sprites.append(pygame.image.load('img/cidade_quebrada.png'))
         self.image = self.sprites[0] # Começa com ela viva
-        self.image = pygame.transform.scale(self.image, (30, 30))
         self.rect = self.image.get_rect()
-        self.rect.topleft = posicao # Serve para posicionar os sprites pegando-os pela esquerda superior e coloca-los na variavel "posicao"
+        self.rect.midbottom = posicao # Serve para posicionar os sprites pegando-os pela esquerda superior e coloca-los na variavel "posicao"
         self.viva = True # Define a caracteristica "True" para um sprite com a casa viva
 
         self.quadros_explosao = [] # Salva as imagens da explosão em uma lista, para depois fazer a animação
@@ -42,7 +41,7 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
         self.index = 0
         self.counter = 0
 
-    def destruir(self):
+    def destruir(self):# Momento que ela quebra, muda a imagem da casa para a de cidade quebrada e inicia a animação da explosão
         if self.viva:               
             self.viva = False
             self.explodindo = True
@@ -136,17 +135,21 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
         if falta <= self.velocidade:
             self.chegou = True
 
-class Botao(): # Classe feita para criar os botoes do menu
-    def __init__(self,x,y,imagem):
-        self.image = imagem
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (x,y)
-        
-    def desenho(self): # Desenha o botão na tela
-        tela.blit(self.image, (self.rect.x, self.rect.y))
+class Botao(): # Botão do menu, com imagem normal e imagem com o mouse em cima
+    def __init__(self, x, y, imagem, imagem_hover):
+        self.imagem = imagem # Guarda a imagem do botão normal
+        self.imagem_hover = imagem_hover # Guarda a imagem do botão com o mouse em cima
+        self.rect = self.imagem.get_rect()
+        self.rect.topleft = (x, y)
 
-    def clicado(self, pos): # Verifica se o botão foi clicado
-        return self.rect.collidepoint(pos)
+    def desenho(self): # Se o mouse está em cima, desenha a versão hover
+        if self.rect.collidepoint(pygame.mouse.get_pos()):
+            tela.blit(self.imagem_hover, self.rect)
+        else:
+            tela.blit(self.imagem, self.rect)
+
+    def clicado(self, pos): # Recebe a posição do clique 
+        return self.rect.collidepoint(pos) # Recebe se o clique foi dentro do botão, devolvendo True ou False
 
 class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
     def __init__(self, origemX, origemY, destino, velocidade):
@@ -185,53 +188,118 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
             
         self.rect.center = (int(self.origemX), int(self.origemY))
 
-class Boss(pygame.sprite.Sprite): # Base dos dois bosses
-    def __init__(self, x, y, cor):
-        super().__init__()
-        self.image = pygame.Surface((60, 30)) # Retângulo provisório, depois troca por sprite
-        self.image.fill(cor)
-        self.rect = self.image.get_rect(center=(x, y))
+class Boss(pygame.sprite.Sprite): # Base dos bosses: cai em direção a uma casa
+    def __init__(self, imagem, velocidade): # Cria a classe Boss, que é um sprite, recebe a imagem e a velocidade
+        super().__init__() #  Garante que a classe mãe seja "vista"
+        self.image = imagem
+        self.rect = self.image.get_rect()
         self.vida = 3
-        self.invencivel_ate = 0 # Até que momento ele não toma dano
+        self.invencivel_ate = 0
+        self.velocidade = velocidade
+        self.reposicionar() # Já nasce lá em cima mirando uma casa
 
-    def levar_dano(self):
+    def reposicionar(self): # Vai pra um ponto aleatório no alto e mira uma casa
+        self.x = random.randint(50, largura - 50)
+        self.y = random.randint(20, 120)
+        destino = random.choice(posicoes_fixas)
+        dx = destino[0] - self.x
+        dy = destino[1] - self.y
+        distancia = math.sqrt(dx**2 + dy**2)
+        self.vx = dx / distancia * self.velocidade
+        self.vy = dy / distancia * self.velocidade
+        self.rect.center = (self.x, self.y)
+
+    def update(self): # Anda um passo em direção à casa
+        self.x += self.vx
+        self.y += self.vy
+        self.rect.center = (self.x, self.y)
+
+    def levar_dano(self): # Se o boss for atingido, perde 1 de vida e fica invencível por 1 segundo
         agora = pygame.time.get_ticks()
-        if agora < self.invencivel_ate: # Ainda invencível: ignora
+        if agora < self.invencivel_ate:
             return
         self.vida -= 1
-        self.invencivel_ate = agora + 1000 # 1 segundo sem tomar dano
+        self.invencivel_ate = agora + 1000
         if self.vida <= 0:
             self.kill()
 
-    def atirar(self): # Por padrão, boss não atira
+    def atirar(self):
         return False
 
+class Boss1(Boss):
+    def __init__(self):
+        super().__init__(img_boss1, 1) # Chama a classe mãe, passando a imagem e a velocidade (vira filho da classe Boss)
 
+    def levar_dano(self):
+        vida_antes = self.vida
+        super().levar_dano()
+        if self.vida < vida_antes and self.vida > 0: # Tomou dano e continua vivo
+            self.reposicionar() # Teleporta pra cima e mira outra casa
 
+class Boss2(Boss): 
+    def __init__(self):
+        super().__init__(img_boss2, 0) # Chama a classe mãe, passando a imagem e a velocidade (vira outro filho da classe Boss)
+        self.rect.center = (100, 100)
+        self.direcao = 3
+        self.ultimo_tiro = pygame.time.get_ticks()
 
+    def update(self): # Anda de um lado pro outro
+        self.rect.x += self.direcao
+        if self.rect.left <= 0 or self.rect.right >= largura:
+            self.direcao *= -1 # Bateu na borda: inverte
 
-botao_jogar = Botao(300, 100, pygame.image.load("img/botao_jogar.png")) # Botão de start
-botao_lederbord = Botao(260, 200, pygame.image.load("img/botao_leaderboard.png")) # Botão de leaderboard
-botao_sair = Botao(300, 300, pygame.image.load("img/botao_sair.png")) # Botão de sair
+    def atirar(self): # A cada 2 segundos, avisa que quer atirar
+        agora = pygame.time.get_ticks()
+        if agora - self.ultimo_tiro >= 2000:
+            self.ultimo_tiro = agora
+            return True
+        return False
+
+botao_jogar = Botao(290, 150, pygame.image.load("img/botao_jogar.png"), pygame.image.load("img/botao_jogar_hover.png")) # Os botões do menu, com a posição e as imagens
+botao_lederbord = Botao(290, 220, pygame.image.load("img/botao_leaderboard.png"), pygame.image.load("img/botao_leaderboard_hover.png"))
+botao_sair = Botao(290, 290, pygame.image.load("img/botao_sair.png"), pygame.image.load("img/botao_sair_hover.png"))
 
 img_nuvem = pygame.image.load("img/nuvem.png").convert_alpha() # As imagens da nuvem e das estrelas do mapa
 img_estrela = pygame.image.load("img/estrela.png").convert_alpha()
 img_estrela_pequena = pygame.image.load("img/estrela_pequena.png").convert_alpha()
+img_boss1 = pygame.image.load("img/boss1.png").convert_alpha()
+img_boss2 = pygame.image.load("img/boss2.png").convert_alpha()
+img_titulo = pygame.image.load("img/titulo.png").convert_alpha()
+img_sol = pygame.image.load("img/sol.png").convert_alpha()
+img_lua = pygame.image.load("img/lua.png").convert_alpha()
+img_municao = pygame.image.load("img/municao.png").convert_alpha()
 
-
-
-
-estrelas_grandes = [(150, 60), (480, 40), (620, 150)] # Posições das estrelas grandes e pequenas, para desenhar no mapa
+estrelas_grandes = [(150, 60), (480, 40), (620, 150)] # Posições das estrelas grandes e pequenas, e das montanhas para desenhar no mapa
 estrelas_pequenas = [(60, 120), (260, 30), (330, 140), (420, 90), (560, 200), (760, 60), (210, 210)]
+montanhas = [(0, 480), (0, 300), (80, 250), (160, 310), (250, 230), (340, 300), (420, 260), (500, 320), (590, 240), (680, 300), (760, 250), (820, 290), (820, 480)]
 # ==================== ELEMENTOS DO MAPA ====================
-def chao():
-    pygame.draw.rect(tela, (179, 128, 0), (-40, 400, 860, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
-    pygame.draw.rect(tela, (179, 128, 0), (-10, 365, 50, 50)) # Blocos dos lados 
-    pygame.draw.rect(tela, (179, 128, 0), (780, 365, 50, 50))  # Blocos dos lados 
-    torre_do_meio1 = pygame.draw.rect(tela, (179, 128, 0), (350, 390, 100, 20)) # Os 3 para a torre do meio
-    torre_do_meio2 = pygame.draw.rect(tela, (179, 128, 0), (365, 380, 70, 20)) 
-    torre_do_meio3 = pygame.draw.rect(tela, (179, 128, 0), (380, 370, 40, 20)) 
 
+def chao(): # Desenha o chão, a torre do meio e os blocos dos lados, com cores diferentes de dia e de noite
+    if dia == 1:
+        cor, cor_topo = (214, 168, 96), (236, 200, 132)
+    else:
+        cor, cor_topo = (120, 90, 60), (150, 115, 80)
+
+    pygame.draw.rect(tela, cor, (-40, 400, 860, 300))       # chão
+    pygame.draw.rect(tela, cor_topo, (-40, 400, 860, 6))    # faixa clara
+    pygame.draw.rect(tela, cor, (-10, 365, 50, 50))         # blocos dos lados
+    pygame.draw.rect(tela, cor, (780, 365, 50, 50))
+    pygame.draw.rect(tela, cor, (350, 390, 100, 20))        # torre do meio
+    pygame.draw.rect(tela, cor, (365, 380, 70, 20))
+    pygame.draw.rect(tela, cor, (380, 370, 40, 20))
+
+def desenhar_municao(): # Desenha os mísseis em pirâmide embaixo da torre
+    posicoes = []
+    for linha in range(4):                      # Linha 0 = base (4 mísseis) ... linha 3 = topo (1)
+        quantidade = 4 - linha
+        largura_linha = quantidade * 11 - 5
+        inicio_x = 400 - largura_linha // 2     # Centraliza a linha embaixo da torre
+        y = 440 - linha * 16                    # Cada linha 16 pixels acima da outra
+        for i in range(quantidade):
+            posicoes.append((inicio_x + i * 11, y))
+
+    for i in range(municao):                    # Desenha um míssil pra cada bala
+        tela.blit(img_municao, posicoes[i])
 
 def buscar_clima(): # Consulta a API do clima e devolve se é dia e a temperatura de Curitiba
     url = "https://api.open-meteo.com/v1/forecast?latitude=-25.43&longitude=-49.27&current=temperature_2m,is_day"
@@ -246,20 +314,32 @@ def buscar_clima(): # Consulta a API do clima e devolve se é dia e a temperatur
 
 def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
     if dia == 1:
-        tela.fill((90, 160, 230))                                # Céu azul
-        pygame.draw.circle(tela, (255, 220, 60), (700, 80), 35)  # Sol
-        tela.blit(img_nuvem, (80, 90)) 
-        tela.blit(img_nuvem, (330, 40))#Nuvens
-        
+        cores = [(40, 90, 190), (55, 115, 210), (75, 140, 225), (100, 165, 235), (130, 190, 240)] # Céu de dia, mais claro perto do chão
     else:
-        tela.fill((0, 0, 0))                                     # Céu preto
-        pygame.draw.circle(tela, (220, 220, 220), (700, 80), 30) # Lua
+        cores = [(5, 5, 20), (10, 10, 35), (20, 15, 50), (30, 20, 65), (45, 30, 80)] # Céu de noite, azul escuro pra roxo
 
-        for pos in estrelas_grandes: # Estrelas 
-            tela.blit(img_estrela, pos)
+    altura_faixa = 400 // len(cores)
+    for i in range(len(cores)): # Desenha cada faixa, uma embaixo da outra
+        pygame.draw.rect(tela, cores[i], (0, i * altura_faixa, largura, altura_faixa))
 
-        for pos in estrelas_pequenas: # Estrelas pequenas
-            tela.blit(img_estrela_pequena, pos)
+    if dia == 1:
+        pygame.draw.polygon(tela, (40, 80, 140), montanhas)      # Montanhas azuladas
+        tela.blit(img_sol, img_sol.get_rect(center=(700, 80)))   # # Sol
+        tela.blit(img_nuvem, (80, 90))                           # Nuvens
+        tela.blit(img_nuvem, (330, 40))
+
+    else:
+        pygame.draw.polygon(tela, (15, 10, 30), montanhas)       # Montanhas escuras
+        tela.blit(img_lua, img_lua.get_rect(center=(700, 80)))   #  Lua
+
+        tempo = pygame.time.get_ticks()
+        for i, pos in enumerate(estrelas_grandes): # i é o número da estrela (0, 1, 2...)
+            if (tempo // 300 + i) % 4 != 0:        # some 1 a cada 4 "batidas"
+                tela.blit(img_estrela, pos)
+
+        for i, pos in enumerate(estrelas_pequenas):
+            if (tempo // 450 + i) % 3 != 0:
+                tela.blit(img_estrela_pequena, pos)
 
 def carregar_ranking(): # Lê o ranking salvo no arquivo
     try:
@@ -291,13 +371,13 @@ def salvar_pontuacao(nome, pontos): # Coloca a pontuação nova no ranking e sal
 dia, temperatura = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 # ==================== POSIÇÕES E O RANKING ====================
 
-posicoes_fixas = [ # A posição das casas
-    (100, 370),
-    (190, 370),
-    (280, 370),
-    (500, 370),
-    (590, 370),
-    (680, 370)
+posicoes_fixas = [
+    (115, 400),
+    (205, 400),
+    (295, 400),
+    (515, 400),
+    (605, 400),
+    (695, 400)
 ]
 
 ranking = carregar_ranking()
@@ -307,6 +387,7 @@ grupo_casas = pygame.sprite.Group() # Grupo das casas
 grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
 grupo_misseis = pygame.sprite.Group()
+grupo_boss = pygame.sprite.Group()
 # ==================== LOOP PRINCIPAL ====================
 
 
@@ -353,7 +434,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                         hora_sem_municao = pygame.time.get_ticks()
             if event.type == KEYDOWN and event.key == K_ESCAPE:
                 estado = "pausado"
-        elif estado == "leaderboard":          # aqui
+        elif estado == "leaderboard":          
             if event.type == KEYDOWN and event.key == K_ESCAPE:
                 estado = "menu"
         elif estado == "pausado":
@@ -363,6 +444,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
     if estado == "menu": # Se está no menu, desenha os botoes na tela
         desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
+        tela.blit(img_titulo, img_titulo.get_rect(center=(410, 60)))
         botao_jogar.desenho()
         botao_lederbord.desenho()
         botao_sair.desenho()
@@ -376,29 +458,49 @@ while True:  # O loop que deixa o jogo rodando para sempre
         grupo_projeteis.update()
         grupo_casas.update()
         grupo_misseis.update()
+        grupo_boss.update()
 
-        for missil in grupo_misseis:
+        for missil in grupo_misseis: # O rastro dos misseis 
             pygame.draw.line(tela, "white", (missil.spawnX, missil.spawnY), missil.rect.center, 2)
 
 
 
-         # Desenha tudo na tela
-        grupo_casas.draw(tela)
+         
+        grupo_casas.draw(tela)  # Desenha tudo na tela
         grupo_projeteis.draw(tela)
         grupo_misseis.draw(tela)
         grupo_explosoes.draw(tela)
+        grupo_boss.draw(tela)
+        desenhar_municao()
+
+        for boss in grupo_boss: # Boss que quer atirar solta um míssil
+            if boss.atirar():
+                grupo_misseis.add(Missil(boss.rect.centerx, boss.rect.bottom, random.choice(posicoes_fixas), misseisVelocidade))
+
+        for explosao in grupo_explosoes: # Explosão acertando o boss
+            for boss in grupo_boss:
+                if explosao.atinge(boss.rect.centerx, boss.rect.centery):
+                    boss.levar_dano()
+
+
+
+        colisoes_boss = pygame.sprite.groupcollide(grupo_boss, grupo_casas, True, False) # Testa todos os bosses contra todas as casas; o boss que encostar some (True), a casa continua (False)
+        for boss, casas_atingidas in colisoes_boss.items():
+            for casa in casas_atingidas:
+                casa.destruir()
+
 
         for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
             if p.chegou:
                 grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
                 p.kill()
 
-        for explosao in grupo_explosoes:
+        for explosao in grupo_explosoes: # A morte dos misseis quando a explosão atinge o centro do missil, usando a função atinge da classe Explosao
                 for missil in grupo_misseis:
                     if explosao.atinge(missil.rect.centerx, missil.rect.centery):
                         missil.kill()
             
-        colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False)
+        colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False) # Testa todos os misseis contra todas as casas; o missil que encostar some (True), a casa continua (False)
         for missil_atingiu, casas_atingidas in colisoes.items():
             for casa in casas_atingidas:
                 if casa.viva: 
@@ -428,7 +530,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                     misseisRestantes -= 1
                     ultimoSpawn = tempoAtual
             
-        elif len(grupo_misseis) == 0  and misseisRestantes == 0 and not esperandoProximaOnda:
+        elif len(grupo_misseis) == 0 and len(grupo_boss) == 0 and misseisRestantes == 0 and not esperandoProximaOnda:
                 
                 esperandoProximaOnda = True
                 tempoEspera = tempoAtual
@@ -436,6 +538,12 @@ while True:  # O loop que deixa o jogo rodando para sempre
         elif esperandoProximaOnda and (tempoAtual -  tempoEspera) >= 3000:
                 
                 ondaAtual += 1 #soma o numero da wave
+                if ondaAtual % 3 == 0: # Onda 3, 6, 9...
+                    if (ondaAtual // 3) % 2 == 1:
+                        grupo_boss.add(Boss1()) # Ondas 3, 9, 15...
+                    else:
+                        grupo_boss.add(Boss2()) # Ondas 6, 12, 18...
+
                 misseisRestantes = 5 + ondaAtual #aumenta em 1 o numero de inimigos a cada wave
                 
                 misseisVelocidade = 2 + (ondaAtual * 0.2) #aumenta a velocidade dos misseis a cada onda
@@ -446,9 +554,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
 
 
-        texto = fonte.render(str(municao), True, (0, 0, 0)) # Desenham o numero de munição embaixo da torre
-        texto_rect = texto.get_rect(center=(400, 425))
-        tela.blit(texto, texto_rect)
+        
 
         if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
             aviso = fonte.render("OUT", True, (255, 0, 0))
@@ -484,4 +590,4 @@ while True:  # O loop que deixa o jogo rodando para sempre
         tela.blit(dica, dica.get_rect(center=(410, 280)))
         
     pygame.display.update() # Usado para atualizar novas coisas
-    clock.tick(40) # Quantidade de FPS
+    clock.tick(60) # Quantidade de FPS

@@ -30,7 +30,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if event.type == MOUSEBUTTONUP: # Quando clica na tela, o y volta um pouco pra cima
             if event.button == 1:
                 y = y + 20
-
+    pygame.draw.polygon(tela, (255, 0, 0), [(100, 300), (150, 200), (200, 300)])
         
     chao = pygame.draw.rect(tela, (179, 128, 0), (0, 400, 800, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
 
