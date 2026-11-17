@@ -15,6 +15,7 @@ altura = 480
 municao = 10
 hora_sem_municao = 0 # Variavel que guarda quando não tem munição
 fonte = pygame.font.Font("fonts/PressStart2P.ttf", 16) # Fonte pixelada (Press Start 2P), tamanho 16
+fonte_pequena = pygame.font.Font("fonts/PressStart2P.ttf", 8) # Mesma fonte, menor, pra textos de apoio
 estado = "menu" # Define o estado do jogo, que começa no menu
 
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
@@ -300,16 +301,45 @@ def desenhar_municao(): # Desenha os mísseis em pirâmide embaixo da torre
     for i in range(municao):                    # Desenha um míssil pra cada bala
         tela.blit(img_municao, posicoes[i])
 
-def buscar_clima(): # Consulta a API do clima e devolve se é dia e a temperatura de Curitiba
-    url = "https://api.open-meteo.com/v1/forecast?latitude=-25.43&longitude=-49.27&current=temperature_2m,is_day"
-    try: # Aqui uma tentativa de pegar os dados da API, caso não consiga, cai no except e devolve dia e sem temperatura
+def buscar_clima(): # Consulta a API do clima: devolve se é dia, a temperatura, se está chovendo e se conseguiu conectar
+    url = "https://api.open-meteo.com/v1/forecast?latitude=-25.43&longitude=-49.27&current=temperature_2m,is_day,rain"
+    try: # Tenta pegar os dados reais da API
         resposta = requests.get(url, timeout=3)
         dados = resposta.json()
         dia = dados["current"]["is_day"]
         temperatura = dados["current"]["temperature_2m"]
-        return dia, temperatura
-    except requests.exceptions.RequestException: # Sem internet ou API fora do ar: usa dia e sem temperatura
-        return 1, None
+        chovendo = dados["current"]["rain"] > 0 # Rain é a chuva em milímetros; maior que 0 = está chovendo
+        return dia, temperatura, chovendo, True # True = dados reais da API
+    except (requests.exceptions.RequestException, KeyError, ValueError): # Sem internet ou resposta estranha da API: modo simulado, de dia, com calor e chuva
+        return 1, 30.0, True, False              # False = dados simulados
+
+def calcular_fator_clima(temperatura): # Quanto mais quente, mais rápidos os mísseis
+    if temperatura is None: # Sem temperatura: velocidade normal
+        return 1.0
+    if temperatura >= 28:
+        return 1.3  # Muito quente: 30% mais rápido
+    if temperatura >= 22:
+        return 1.15 # Quente: 15% mais rápido
+    if temperatura <= 12:
+        return 0.8  # Frio: 20% mais lento
+    return 1.0      # Ameno: normal
+
+def criar_chuva(): # Cria as gotas em posições aleatórias
+    gotas = []
+    for i in range(120):
+        gotas.append([random.randint(0, largura), random.randint(0, 400)]) # Cada gota é [x, y]
+    return gotas
+
+def desenhar_chuva(): # Move e desenha as gotas (só se estiver chovendo)
+    if not chovendo:
+        return
+    for gota in gotas:
+        gota[0] -= 2 # Vai um pouco pra esquerda (chuva inclinada)
+        gota[1] += 9 # Cai
+        if gota[1] > 400: # Chegou no chão: volta pro topo num lugar aleatório
+            gota[0] = random.randint(0, largura + 100)
+            gota[1] = random.randint(-40, 0)
+        pygame.draw.line(tela, (170, 200, 255), (gota[0], gota[1]), (gota[0] + 2, gota[1] - 8), 1)
 
 def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
     if dia == 1:
@@ -377,7 +407,7 @@ def resetarJogo(): # Volta tudo pro começo, pra começar uma partida nova
     hora_sem_municao = 0
     ondaAtual = 1
     misseisRestantes = 5
-    misseisVelocidade = 2
+    misseisVelocidade = 2 * fator_clima   # A velocidade dos mísseis é multiplicada pelo fator do clima, que depende da temperatura
     SpawnTime = 1000
     ultimoSpawn = pygame.time.get_ticks()
     esperandoProximaOnda = False
@@ -401,7 +431,9 @@ def resetarJogo(): # Volta tudo pro começo, pra começar uma partida nova
         nova_casa = Casa(pos, "img/cidade.png")
         grupo_casas.add(nova_casa)
 
-dia, temperatura = buscar_clima() # Chama a API uma vez só, quando o jogo abre
+dia, temperatura, chovendo, online = buscar_clima() # Chama a API uma vez só, quando o jogo abre
+fator_clima = calcular_fator_clima(temperatura) # Multiplicador da velocidade dos mísseis
+gotas = criar_chuva()
 # ==================== POSIÇÕES E O RANKING ====================
 
 posicoes_fixas = [
@@ -487,6 +519,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
     if estado == "menu": # Se está no menu, desenha os botoes na tela
         desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
+        desenhar_chuva()
         tela.blit(img_titulo, img_titulo.get_rect(center=(410, 60)))
         botao_jogar.desenho()
         botao_lederbord.desenho()
@@ -572,7 +605,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                         grupo_boss.add(Boss2()) # Ondas 6, 12, 18...
 
                 misseisRestantes = 5 + ondaAtual #aumenta em 1 o numero de inimigos a cada wave
-                misseisVelocidade = 2 + (ondaAtual * 0.2) #aumenta a velocidade dos misseis a cada onda
+                misseisVelocidade = (2 + (ondaAtual * 0.2)) * fator_clima  #aumenta a velocidade dos misseis a cada onda (A velocidade dos misseis é multiplicada pelo fator do clima, que depende da temperatura)
                 SpawnTime = max(500, 1500 - (ondaAtual * 50)) #diminui o tempo entre o nascimento de um missil e outro
                 esperandoProximaOnda = False
 
@@ -585,18 +618,28 @@ while True:  # O loop que deixa o jogo rodando para sempre
         grupo_misseis.draw(tela)
         grupo_boss.draw(tela)
         grupo_explosoes.draw(tela)
+        desenhar_chuva()
         desenhar_municao()
 
         if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
             aviso = fonte.render("OUT", False, (255, 0, 0))
             tela.blit(aviso, aviso.get_rect(center=(400, 425)))
 
-        if temperatura is not None:
+        if online: # Dados reais da API
             clima = fonte.render(f"Curitiba: {temperatura}°C", False, (255, 255, 255))
-            tela.blit(clima, (20, 20))
+        else:      # Sem internet: deixa claro que é simulado
+            clima = fonte.render(f"Simulado: {temperatura}°C", False, (255, 200, 120))
+        tela.blit(clima, (20, 20))
 
         textoOndaAtual = fonte.render(f"Onda Atual: {ondaAtual}", False, (255, 255, 255))
         tela.blit(textoOndaAtual, (20, 50)) # Embaixo da temperatura
+
+        if fator_clima > 1: # Mostra o efeito do clima na dificuldade
+            efeito = fonte_pequena.render(f"Calor: misseis +{round((fator_clima - 1) * 100)}%", False, (255, 140, 60))
+            tela.blit(efeito, (20, 80))
+        elif fator_clima < 1:
+            efeito = fonte_pequena.render(f"Frio: misseis -{round((1 - fator_clima) * 100)}%", False, (120, 200, 255))
+            tela.blit(efeito, (20, 80))
 
         texto_pontos = fonte.render(f"Pontos: {pontos}", False, (255, 255, 255))
         tela.blit(texto_pontos, texto_pontos.get_rect(topright=(largura - 20, 20))) # Alinhado pela direita, não sai da tela quando o número cresce
