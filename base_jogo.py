@@ -1,6 +1,5 @@
-
 import pygame # Pygame, atalhos do pygame, função de sair, math (raiz quadrada), e requests (para pegar a API do clima)
-from pygame.locals import * 
+from pygame.locals import *
 from sys import exit
 import math
 import requests
@@ -15,7 +14,7 @@ largura = 820 # Define variaveis que são usadas depois
 altura = 480
 municao = 10
 hora_sem_municao = 0 # Variavel que guarda quando não tem munição
-fonte = pygame.font.Font("fonts/PressStart2P.ttf", 16) # Fonte pra escrever (arial, tamanho 24, negrito)
+fonte = pygame.font.Font("fonts/PressStart2P.ttf", 16) # Fonte pixelada (Press Start 2P), tamanho 16
 estado = "menu" # Define o estado do jogo, que começa no menu
 
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
@@ -31,7 +30,7 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
         self.sprites.append(pygame.image.load('img/cidade_quebrada.png'))
         self.image = self.sprites[0] # Começa com ela viva
         self.rect = self.image.get_rect()
-        self.rect.midbottom = posicao # Serve para posicionar os sprites pegando-os pela esquerda superior e coloca-los na variavel "posicao"
+        self.rect.midbottom = posicao # Posiciona pelo meio da base, pra cidade ficar em pé no chão
         self.viva = True # Define a caracteristica "True" para um sprite com a casa viva
 
         self.quadros_explosao = [] # Salva as imagens da explosão em uma lista, para depois fazer a animação
@@ -42,7 +41,7 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
         self.counter = 0
 
     def destruir(self):# Momento que ela quebra, muda a imagem da casa para a de cidade quebrada e inicia a animação da explosão
-        if self.viva:               
+        if self.viva:
             self.viva = False
             self.explodindo = True
             self.index = 0
@@ -51,15 +50,15 @@ class Casa(pygame.sprite.Sprite): # Criando uma classe para a casa, que é um sp
     def update(self): # Para a ficar trocando a imagem da casa para a de cidade quebrada, e para a animação da explosão
         if self.explodindo:
             self.counter += 1
-            if self.counter >= 5:                  
+            if self.counter >= 5:
                 self.counter = 0
-                base = self.rect.midbottom          
+                base = self.rect.midbottom
                 self.image = self.quadros_explosao[self.index]
                 self.rect = self.image.get_rect()
-                self.rect.midbottom = base          
+                self.rect.midbottom = base
                 self.index += 1
                 if self.index >= len(self.quadros_explosao):
-                    self.explodindo = False         
+                    self.explodindo = False
 
 class Explosao(pygame.sprite.Sprite): # Classe feita para realizar a explosão no jogo
 	def __init__(self, x, y):
@@ -74,7 +73,7 @@ class Explosao(pygame.sprite.Sprite): # Classe feita para realizar a explosão n
 		self.rect = self.image.get_rect()
 		self.rect.center = [x, y] # Coloca o centro da explosão na variavel x e y
 		self.counter = 0
-		self.raio = 40 
+		self.raio = 40
 
 	def update(self): # Uma função criada para trocar entre os 5 sprites da explosao"
 		velocidade_explosao = 4
@@ -84,7 +83,7 @@ class Explosao(pygame.sprite.Sprite): # Classe feita para realizar a explosão n
 			self.counter = 0
 			self.index += 1
 			self.image = self.images[self.index]
-		
+
 		if self.index >= len(self.images) - 1 and self.counter >= velocidade_explosao: # Animacao terminou: remove a explosao
 			self.kill()
 
@@ -95,12 +94,12 @@ class Explosao(pygame.sprite.Sprite): # Classe feita para realizar a explosão n
 		return distancia <= self.raio
 
 class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando chega no destino
-    def __init__(self, destino): # Roda quando atira, recebe o ponto do clique 
+    def __init__(self, destino): # Roda quando atira, recebe o ponto do clique
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.Surface((8, 8), pygame.SRCALPHA)
         pygame.draw.circle(self.image, (255, 255, 255), (4, 4), 4) # aparencia: bola branca com fundo transparente
 
-        
+
         self.x = 400 # Posicao atual (comeca no topo da torre do meio onde estará o canhão)
         self.y = 370
         self.destino = destino
@@ -110,25 +109,25 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
         self.rect = self.image.get_rect()
         self.rect.center = [self.x, self.y]
 
-        
+
         dx = destino[0] - self.x # Quanto falta andar na horizontal
         dy = destino[1] - self.y # Quanto falta andar na vertical
-        distancia = math.sqrt(dx**2 + dy**2) # Quanto falta andar em linha reta 
+        distancia = math.sqrt(dx**2 + dy**2) # Quanto falta andar em linha reta
         if distancia == 0: # Se clicou em cima do canhão, a distância é 0 e não dá pra dividir: já marca como chegou
             self.chegou = True # Afirma que já chegou
-            self.vx = 0 # Não anda mais 
+            self.vx = 0 # Não anda mais
             self.vy = 0
         else:
             self.vx = dx / distancia * self.velocidade
             self.vy = dy / distancia * self.velocidade
 
-    def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado 
+    def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado
 
         self.x += self.vx # Anda um passo
         self.y += self.vy
         self.rect.center = [self.x, self.y]
 
-        
+
         dx = self.destino[0] - self.x # Quanto falta ate o destino
         dy = self.destino[1] - self.y
         falta = math.sqrt(dx**2 + dy**2)
@@ -148,17 +147,17 @@ class Botao(): # Botão do menu, com imagem normal e imagem com o mouse em cima
         else:
             tela.blit(self.imagem, self.rect)
 
-    def clicado(self, pos): # Recebe a posição do clique 
+    def clicado(self, pos): # Recebe a posição do clique
         return self.rect.collidepoint(pos) # Recebe se o clique foi dentro do botão, devolvendo True ou False
 
 class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
     def __init__(self, origemX, origemY, destino, velocidade):
         super().__init__() #garante que a classe mãe seja "vista"
-        
+
         self.image = pygame.Surface((10, 10))
         self.image.fill("red")
         self.rect = self.image.get_rect()
-        
+
         self.origemX = origemX
         self.origemY = origemY
         self.spawnX = origemX   # guarda de onde ele saiu, pro rastro
@@ -166,26 +165,26 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
         self.destinoX = destino[0]
         self.destinoY = destino[1]
         self.velocidade = velocidade
-        
+
         self.rect.center = (self.origemX, self.origemY)
-        
-    def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado 
+
+    def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado
         dx = self.destinoX - self.origemX
         dy = self.destinoY - self.origemY
-        
+
         distancia = math.hypot(dx,dy)
-    
+
         if distancia > 0:
             if distancia <= self.velocidade:
                 self.origemX = self.destinoX
                 self.origemY = self.destinoY
-                self.kill() 
+                self.kill()
             else:
                 direcaoX = dx/distancia
-                direcaoY = dy/distancia    
+                direcaoY = dy/distancia
                 self.origemX += direcaoX*self.velocidade
                 self.origemY += direcaoY*self.velocidade
-            
+
         self.rect.center = (int(self.origemX), int(self.origemY))
 
 class Boss(pygame.sprite.Sprite): # Base dos bosses: cai em direção a uma casa
@@ -236,7 +235,7 @@ class Boss1(Boss):
         if self.vida < vida_antes and self.vida > 0: # Tomou dano e continua vivo
             self.reposicionar() # Teleporta pra cima e mira outra casa
 
-class Boss2(Boss): 
+class Boss2(Boss):
     def __init__(self):
         super().__init__(img_boss2, 0) # Chama a classe mãe, passando a imagem e a velocidade (vira outro filho da classe Boss)
         self.rect.center = (100, 100)
@@ -324,13 +323,13 @@ def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
 
     if dia == 1:
         pygame.draw.polygon(tela, (40, 80, 140), montanhas)      # Montanhas azuladas
-        tela.blit(img_sol, img_sol.get_rect(center=(700, 80)))   # # Sol
+        tela.blit(img_sol, img_sol.get_rect(center=(700, 80)))   # Sol
         tela.blit(img_nuvem, (80, 90))                           # Nuvens
         tela.blit(img_nuvem, (330, 40))
 
     else:
         pygame.draw.polygon(tela, (15, 10, 30), montanhas)       # Montanhas escuras
-        tela.blit(img_lua, img_lua.get_rect(center=(700, 80)))   #  Lua
+        tela.blit(img_lua, img_lua.get_rect(center=(700, 80)))   # Lua
 
         tempo = pygame.time.get_ticks()
         for i, pos in enumerate(estrelas_grandes): # i é o número da estrela (0, 1, 2...)
@@ -366,7 +365,41 @@ def salvar_pontuacao(nome, pontos): # Coloca a pontuação nova no ranking e sal
     arquivo.close()
     return ranking
 
+def resetarJogo(): # Volta tudo pro começo, pra começar uma partida nova
+    # Definido a alteração dessas variáveis globais
+    global municao, hora_sem_municao
+    global ondaAtual, misseisRestantes, misseisVelocidade, SpawnTime
+    global ultimoSpawn, esperandoProximaOnda, tempoEspera
+    global pontos, gameOver, digitarNome, nomeJogador
 
+    # Controle de Waves
+    municao = 10
+    hora_sem_municao = 0
+    ondaAtual = 1
+    misseisRestantes = 5
+    misseisVelocidade = 2
+    SpawnTime = 1000
+    ultimoSpawn = pygame.time.get_ticks()
+    esperandoProximaOnda = False
+    tempoEspera = 0
+
+    # Reseta pontuação e as telas de fim de jogo
+    pontos = 0
+    gameOver = False
+    digitarNome = False
+    nomeJogador = ""
+
+    # Esvazia todos os grupos de sprites da partida anterior
+    grupo_casas.empty()
+    grupo_misseis.empty()
+    grupo_projeteis.empty()
+    grupo_explosoes.empty()
+    grupo_boss.empty()
+
+    # Reconstrói as casas
+    for pos in posicoes_fixas:
+        nova_casa = Casa(pos, "img/cidade.png")
+        grupo_casas.add(nova_casa)
 
 dia, temperatura = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 # ==================== POSIÇÕES E O RANKING ====================
@@ -383,28 +416,19 @@ posicoes_fixas = [
 ranking = carregar_ranking()
 
 # ==================== GRUPOS DE SPRITES ====================
-grupo_casas = pygame.sprite.Group() # Grupo das casas 
+grupo_casas = pygame.sprite.Group() # Grupo das casas
 grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
 grupo_misseis = pygame.sprite.Group()
 grupo_boss = pygame.sprite.Group()
+
+# ==================== VARIÁVEIS DA PARTIDA ====================
+# As variáveis das ondas, dos pontos e do game over são criadas aqui pelo resetarJogo()
+resetarJogo()
+
+botaoAvancar = pygame.Rect(largura // 2 - 90, altura // 2 + 50, 180, 50) # Botão "Avançar" da tela de game over
+
 # ==================== LOOP PRINCIPAL ====================
-
-
-for pos in posicoes_fixas: # Roda todas as casas e cria uma nova casa em cada posição, adicionando ao grupo de sprites
-    nova_casa = Casa(pos, "img/cidade.png")
-    grupo_casas.add(nova_casa)
-
-
-ondaAtual = 1
-misseisRestantes = 5
-misseisVelocidade = 2
-SpawnTime = 1000
-ultimoSpawn = pygame.time.get_ticks()
-esperandoProximaOnda = False
-tempoEspera = 0
-
-
 
 while True:  # O loop que deixa o jogo rodando para sempre
     tela.fill((0,0,0)) # Tela preta
@@ -415,7 +439,8 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
         if estado == "menu": # No menu, o clique só serve pro botão
             if event.type == MOUSEBUTTONUP and event.button == 1:
-                if botao_jogar.clicado(event.pos): # Se clicar no botão de jogar, muda o estado para jogando
+                if botao_jogar.clicado(event.pos): # Se clicar no botão de jogar, começa uma partida nova
+                    resetarJogo()
                     estado = "jogando"
                 if botao_lederbord.clicado(event.pos): # Se clicar no botão de leaderboard, muda o estado para leaderboard
                     estado = "leaderboard"
@@ -423,18 +448,36 @@ while True:  # O loop que deixa o jogo rodando para sempre
                     pygame.quit()
                     exit()
 
-        elif estado == "jogando": # Jogando, o clique atira
-            if event.type == MOUSEBUTTONUP and event.button == 1:
-                
+        elif estado == "jogando":
+            if gameOver: # Tela de game over: o clique só serve pro botão Avançar
+                if event.type == MOUSEBUTTONUP and event.button == 1:
+                    if botaoAvancar.collidepoint(event.pos):
+                        gameOver = False
+                        digitarNome = True
 
-                if municao > 0: # Cada tiro gasta 1 de munição
-                    grupo_projeteis.add(Projetil(event.pos))
-                    municao -= 1
-                    if municao == 0: # Quando a última bala é gasta, anota a hora. É aqui que o cronômetro começa.
-                        hora_sem_municao = pygame.time.get_ticks()
-            if event.type == KEYDOWN and event.key == K_ESCAPE:
-                estado = "pausado"
-        elif estado == "leaderboard":          
+            elif digitarNome: # Tela de digitar o nome: o teclado escreve o nome
+                if event.type == KEYDOWN:
+                    if event.key == K_BACKSPACE:
+                        nomeJogador = nomeJogador[:-1] # Apaga a última letra
+                    elif event.key == K_RETURN:
+                        if nomeJogador.strip() != "": # Tira os espaços e confere se o nome não está vazio
+                            ranking = salvar_pontuacao(nomeJogador.strip(), pontos) # Salva e já devolve o ranking atualizado
+                            digitarNome = False
+                            estado = "leaderboard"
+                    elif event.unicode.isprintable() and len(nomeJogador) < 10: # Só letras, números e símbolos visíveis, até 10 caracteres
+                        nomeJogador += event.unicode # unicode é a letra da tecla apertada; += junta no final do nome
+
+            else: # Jogando normal: o clique atira e o ESC pausa
+                if event.type == MOUSEBUTTONUP and event.button == 1:
+                    if municao > 0: # Cada tiro gasta 1 de munição
+                        grupo_projeteis.add(Projetil(event.pos))
+                        municao -= 1
+                        if municao == 0: # Quando a última bala é gasta, anota a hora. É aqui que o cronômetro começa.
+                            hora_sem_municao = pygame.time.get_ticks()
+                if event.type == KEYDOWN and event.key == K_ESCAPE:
+                    estado = "pausado"
+
+        elif estado == "leaderboard":
             if event.type == KEYDOWN and event.key == K_ESCAPE:
                 estado = "menu"
         elif estado == "pausado":
@@ -448,95 +491,79 @@ while True:  # O loop que deixa o jogo rodando para sempre
         botao_jogar.desenho()
         botao_lederbord.desenho()
         botao_sair.desenho()
-        
+
 
     elif estado == "jogando": # Todo o resto do código é o que acontece quando está jogando
-        
+
         desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
         chao() # Puxa a função que faz o ambiente do mapa
-        grupo_explosoes.update() # Atualiza as duas classes
-        grupo_projeteis.update()
-        grupo_casas.update()
-        grupo_misseis.update()
-        grupo_boss.update()
+        grupo_casas.update() # As casas animam sempre, pra explosão da última cidade aparecer mesmo no game over
+        grupo_explosoes.update()
 
-        for missil in grupo_misseis: # O rastro dos misseis 
-            pygame.draw.line(tela, "white", (missil.spawnX, missil.spawnY), missil.rect.center, 2)
+        if not gameOver and not digitarNome: # Só mexe nas coisas enquanto a partida está rolando
+            grupo_projeteis.update()
+            grupo_misseis.update()
+            grupo_boss.update()
 
+            for boss in grupo_boss: # Boss que quer atirar solta um míssil
+                if boss.atirar():
+                    grupo_misseis.add(Missil(boss.rect.centerx, boss.rect.bottom, random.choice(posicoes_fixas), misseisVelocidade))
 
+            for explosao in grupo_explosoes: # Explosão acertando o boss
+                for boss in grupo_boss:
+                    if explosao.atinge(boss.rect.centerx, boss.rect.centery):
+                        boss.levar_dano()
+                        if not boss.alive(): # alive() é False quando o boss acabou de morrer (saiu do grupo)
+                            pontos += 200 # Boss derrotado vale 200 pontos
 
-         
-        grupo_casas.draw(tela)  # Desenha tudo na tela
-        grupo_projeteis.draw(tela)
-        grupo_misseis.draw(tela)
-        grupo_explosoes.draw(tela)
-        grupo_boss.draw(tela)
-        desenhar_municao()
+            colisoes_boss = pygame.sprite.groupcollide(grupo_boss, grupo_casas, True, False) # Testa todos os bosses contra todas as casas; o boss que encostar some (True), a casa continua (False)
+            for boss, casas_atingidas in colisoes_boss.items():
+                for casa in casas_atingidas:
+                    casa.destruir()
 
-        for boss in grupo_boss: # Boss que quer atirar solta um míssil
-            if boss.atirar():
-                grupo_misseis.add(Missil(boss.rect.centerx, boss.rect.bottom, random.choice(posicoes_fixas), misseisVelocidade))
+            for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
+                if p.chegou:
+                    grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
+                    p.kill()
 
-        for explosao in grupo_explosoes: # Explosão acertando o boss
-            for boss in grupo_boss:
-                if explosao.atinge(boss.rect.centerx, boss.rect.centery):
-                    boss.levar_dano()
-
-
-
-        colisoes_boss = pygame.sprite.groupcollide(grupo_boss, grupo_casas, True, False) # Testa todos os bosses contra todas as casas; o boss que encostar some (True), a casa continua (False)
-        for boss, casas_atingidas in colisoes_boss.items():
-            for casa in casas_atingidas:
-                casa.destruir()
-
-
-        for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
-            if p.chegou:
-                grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
-                p.kill()
-
-        for explosao in grupo_explosoes: # A morte dos misseis quando a explosão atinge o centro do missil, usando a função atinge da classe Explosao
+            for explosao in grupo_explosoes: # A morte dos misseis quando a explosão atinge o centro do missil, usando a função atinge da classe Explosao
                 for missil in grupo_misseis:
                     if explosao.atinge(missil.rect.centerx, missil.rect.centery):
                         missil.kill()
-            
-        colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False) # Testa todos os misseis contra todas as casas; o missil que encostar some (True), a casa continua (False)
-        for missil_atingiu, casas_atingidas in colisoes.items():
-            for casa in casas_atingidas:
-                if casa.viva: 
-                    casa.destruir()
+                        pontos += 25 # Soma 25 pontos por missil destruido
 
-        if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
-            municao = 10
+            colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False) # Testa todos os misseis contra todas as casas; o missil que encostar some (True), a casa continua (False)
+            for missil_atingiu, casas_atingidas in colisoes.items():
+                for casa in casas_atingidas:
+                    if casa.viva:
+                        casa.destruir()
 
-        textoOndaAtual = fonte.render(f"Onda Atual: {ondaAtual}", True, (255, 255, 255))
-        tela.blit(textoOndaAtual, (20,50)) #posiciona o texto no canto superior esquerdo (x = 10, y = 10)
-            
-        if esperandoProximaOnda:
-                avisoEntreOndas = fonte.render(f"Onda {ondaAtual} concluída! Prepare-se!", True, (255, 255, 0))
-                avisoEntreOndasRect = avisoEntreOndas.get_rect(center = (largura // 2, altura //2 )) #// significa dividir por 1 valor inteiro, para não ter serrilhado nos pixels
-                tela.blit(avisoEntreOndas, avisoEntreOndasRect)
-            
-        tempoAtual = pygame.time.get_ticks() #variavel que salva o tempo atual
-        if misseisRestantes > 0:
-            if tempoAtual - ultimoSpawn >= SpawnTime: # verifica se ja passou o tempo entre misseis
-                    
+            casasVivas = 0 # Conta quantas casas ainda estão vivas
+            for casa in grupo_casas:
+                if casa.viva:
+                    casasVivas += 1
+            if casasVivas == 0: # Todas as cidades destruídas: fim de jogo
+                gameOver = True
+
+            if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Confere a cada foto se ja passaram 3 segundos desde que a munição acabou
+                municao = 10
+
+            tempoAtual = pygame.time.get_ticks() #variavel que salva o tempo atual
+            if misseisRestantes > 0:
+                if tempoAtual - ultimoSpawn >= SpawnTime: # verifica se ja passou o tempo entre misseis
                     origemX = random.randint(0, largura)
-                    destino = random.choice(posicoes_fixas) 
-                    
+                    destino = random.choice(posicoes_fixas)
                     novoMissil = Missil(origemX, 0, destino, misseisVelocidade)
                     grupo_misseis.add(novoMissil)
-                    
                     misseisRestantes -= 1
                     ultimoSpawn = tempoAtual
-            
-        elif len(grupo_misseis) == 0 and len(grupo_boss) == 0 and misseisRestantes == 0 and not esperandoProximaOnda:
-                
+
+            elif len(grupo_misseis) == 0 and len(grupo_boss) == 0 and misseisRestantes == 0 and not esperandoProximaOnda:
+                pontos += casasVivas * 100 # Bônus: 100 pontos por cidade que sobreviveu à onda
                 esperandoProximaOnda = True
                 tempoEspera = tempoAtual
-            
-        elif esperandoProximaOnda and (tempoAtual -  tempoEspera) >= 3000:
-                
+
+            elif esperandoProximaOnda and (tempoAtual -  tempoEspera) >= 3000:
                 ondaAtual += 1 #soma o numero da wave
                 if ondaAtual % 3 == 0: # Onda 3, 6, 9...
                     if (ondaAtual // 3) % 2 == 1:
@@ -545,49 +572,98 @@ while True:  # O loop que deixa o jogo rodando para sempre
                         grupo_boss.add(Boss2()) # Ondas 6, 12, 18...
 
                 misseisRestantes = 5 + ondaAtual #aumenta em 1 o numero de inimigos a cada wave
-                
                 misseisVelocidade = 2 + (ondaAtual * 0.2) #aumenta a velocidade dos misseis a cada onda
-                
                 SpawnTime = max(500, 1500 - (ondaAtual * 50)) #diminui o tempo entre o nascimento de um missil e outro
-                
                 esperandoProximaOnda = False
 
+        # ---------- DESENHO DA PARTIDA (aparece até atrás do game over) ----------
+        for missil in grupo_misseis: # O rastro dos misseis
+            pygame.draw.line(tela, "white", (missil.spawnX, missil.spawnY), missil.rect.center, 2)
 
-
-        
+        grupo_casas.draw(tela)  # Desenha tudo na tela
+        grupo_projeteis.draw(tela)
+        grupo_misseis.draw(tela)
+        grupo_boss.draw(tela)
+        grupo_explosoes.draw(tela)
+        desenhar_municao()
 
         if municao == 0: # Se a munição for zero, deixa na tela "OUT" ate a munição voltar a ser 10
-            aviso = fonte.render("OUT", True, (255, 0, 0))
-            aviso_rect = aviso.get_rect(center=(400, 450))
-            tela.blit(aviso, aviso_rect)
+            aviso = fonte.render("OUT", False, (255, 0, 0))
+            tela.blit(aviso, aviso.get_rect(center=(400, 425)))
 
         if temperatura is not None:
-            clima = fonte.render(f"Curitiba: {temperatura}°C", True, (255, 255, 255))
+            clima = fonte.render(f"Curitiba: {temperatura}°C", False, (255, 255, 255))
             tela.blit(clima, (20, 20))
 
+        textoOndaAtual = fonte.render(f"Onda Atual: {ondaAtual}", False, (255, 255, 255))
+        tela.blit(textoOndaAtual, (20, 50)) # Embaixo da temperatura
+
+        texto_pontos = fonte.render(f"Pontos: {pontos}", False, (255, 255, 255))
+        tela.blit(texto_pontos, texto_pontos.get_rect(topright=(largura - 20, 20))) # Alinhado pela direita, não sai da tela quando o número cresce
+
+        if esperandoProximaOnda and not gameOver:
+            avisoEntreOndas = fonte.render(f"Onda {ondaAtual} concluída! Prepare-se!", False, (255, 255, 0))
+            tela.blit(avisoEntreOndas, avisoEntreOndas.get_rect(center=(largura // 2, altura // 2)))
+
+        # ==================== TELA GAME OVER COM BOTAO AVANÇAR ====================
+        if gameOver:
+            telaGameOver = pygame.Surface((largura, altura)) #cria a surface do game over (no caso do mesmo tamanho da tela do jogo)
+            telaGameOver.set_alpha(170) #Definição do nivel de transparencia
+            telaGameOver.fill((0,0,0)) # Pinta a superficie (nesse caso, de preto)
+            tela.blit(telaGameOver, (0, 0)) # Coloca a superficie em cima da tela do jogo, partindo da cordenada (0,0)
+
+            textoGameOver = fonte.render("GAME OVER", False, (255, 60, 60))
+            tela.blit(textoGameOver, textoGameOver.get_rect(center=(largura // 2, altura // 2 - 70)))
+
+            textoFinal = fonte.render(f"Pontos: {pontos}   Onda: {ondaAtual}", False, (255, 220, 60)) # Resumo da partida
+            tela.blit(textoFinal, textoFinal.get_rect(center=(largura // 2, altura // 2 - 30)))
+
+            corBorda = (255, 220, 40) if botaoAvancar.collidepoint(pygame.mouse.get_pos()) else (0, 220, 255) # Borda amarela com o mouse em cima
+            pygame.draw.rect(tela, (8, 8, 28), botaoAvancar)
+            pygame.draw.rect(tela, corBorda, botaoAvancar, 3)
+            textoBotaoAvancar = fonte.render("AVANÇAR", False, (255, 220, 60))
+            tela.blit(textoBotaoAvancar, textoBotaoAvancar.get_rect(center=botaoAvancar.center))
+
+        # ==================== TELA PARA DIGITAR O NOME ====================
+        if digitarNome:
+            tela.fill((0, 0, 0)) #tela preta limpa
+
+            textoNome = fonte.render("Digite seu nome:", False, (255, 255, 255))
+            tela.blit(textoNome, textoNome.get_rect(center=(largura // 2, (altura // 2) - 60)))
+
+            caixaNome = pygame.Rect(largura // 2 - 150, altura // 2 - 20, 300, 50)
+            pygame.draw.rect(tela, (8, 8, 28), caixaNome)
+            pygame.draw.rect(tela, (0, 220, 255), caixaNome, 2)
+
+            cursor = "_" if (pygame.time.get_ticks() // 500) % 2 == 0 else "" # a cada 500 ms alterna entre caracter _ e uma string vazia
+            textoNomeRender = fonte.render(nomeJogador + cursor, False, (255, 255, 0)) # junção do cursor + caractere digitado pelo usuario
+            tela.blit(textoNomeRender, textoNomeRender.get_rect(center=caixaNome.center))
+
+            textoEnter = fonte.render("ENTER para confirmar", False, (150, 150, 150)) # para confirmar o nome
+            tela.blit(textoEnter, textoEnter.get_rect(center=(largura // 2, altura // 2 + 60)))
 
     elif estado == "leaderboard": # Se o estado for leaderboard, desenha o ranking na tela
         desenhar_ceu()
-        titulo = fonte.render("LEADERBOARD", True, (255, 0, 0))
+        titulo = fonte.render("LEADERBOARD", False, (255, 0, 0))
         tela.blit(titulo, titulo.get_rect(center=(410, 80)))
 
-        y = 150
+        y = 130
         posicao = 1
         for jogador in ranking:   # cada jogador é um dicionário, ex.: {"nome": "Victor", "pontos": 1200}
-            linha = fonte.render(f"{posicao}. {jogador['nome']}   {jogador['pontos']}", True, (255, 255, 255))
+            linha = fonte.render(f"{posicao}. {jogador['nome']}   {jogador['pontos']}", False, (255, 255, 255))
             tela.blit(linha, linha.get_rect(center=(410, y)))
-            y += 40
+            y += 28
             posicao += 1
 
-        dica = fonte.render("ESC para voltar", True, (150, 150, 150))
-        tela.blit(dica, dica.get_rect(center=(410, 420)))
+        dica = fonte.render("ESC para voltar", False, (150, 150, 150))
+        tela.blit(dica, dica.get_rect(center=(410, 440)))
 
     elif estado == "pausado": # Se o jogo estiver pausado, desenha o texto de pausa e fica em uma tela que so é possivel sair apertando ESC
         desenhar_ceu()
-        pausa_texto = fonte.render("PAUSADO", True, (255, 255, 0))
+        pausa_texto = fonte.render("PAUSADO", False, (255, 255, 0))
         tela.blit(pausa_texto, pausa_texto.get_rect(center=(410, 240)))
-        dica = fonte.render("ESC para voltar", True, (150, 150, 150))
+        dica = fonte.render("ESC para voltar", False, (150, 150, 150))
         tela.blit(dica, dica.get_rect(center=(410, 280)))
-        
+
     pygame.display.update() # Usado para atualizar novas coisas
     clock.tick(60) # Quantidade de FPS
