@@ -240,6 +240,41 @@ def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
         for pos in estrelas_pequenas: # Estrelas pequenas
             tela.blit(img_estrela_pequena, pos)
 
+def resetarJogo():
+    # Definido a alteração dessas variáveis globais
+    global municao, hora_sem_municao
+    global ondaAtual, misseisRestantes, misseisVelocidade, SpawnTime
+    global ultimoSpawn, esperandoProximaOnda, tempoEspera
+    global pontos, gameOver, digitarNome, nomeJogador
+
+    # Controle de Waves
+    municao = 10
+    hora_sem_municao = 0
+    ondaAtual = 1
+    misseisRestantes = 5
+    misseisVelocidade = 2
+    SpawnTime = 1000
+    ultimoSpawn = pygame.time.get_ticks()
+    esperandoProximaOnda = False
+    tempoEspera = 0
+
+    # Reseta pontuação e as telas de fim de jogo
+    pontos = 0
+    gameOver = False
+    digitarNome = False
+    nomeJogador = ""
+    
+    # Esvazia todos os grupos de sprites da partida anterior
+    grupo_casas.empty()
+    grupo_misseis.empty()
+    grupo_projeteis.empty()
+    grupo_explosoes.empty()
+    
+    # Reconstrói as casas
+    for pos in posicoes_fixas:
+        nova_casa = Casa(pos, "img/cidade.png")
+        grupo_casas.add(nova_casa)
+
 def carregar_ranking(): # Lê o ranking salvo no arquivo
     try:
         arquivo = open("ranking.json", "r")
@@ -337,7 +372,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                         digitarNome = False
                         estado = "leaderboard"
                 else:
-                    if len(nomeJogador) <= 10: #limita o nomeaté 10 letras
+                    if event.unicode.isprintable() and len(nomeJogador) < 10: #limita o nomeaté 10 letras
                         nomeJogador += event.unicode #Unicode serve pro pygame registrar a tecla apertada como uma letra e o += é concatenação no python
                         
                     
@@ -345,6 +380,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if estado == "menu": # No menu, o clique só serve pro botão
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if botao_jogar.clicado(event.pos): # Se clicar no botão de jogar, muda o estado para jogando
+                    resetarJogo()
                     estado = "jogando"
                 if botao_lederbord.clicado(event.pos): # Se clicar no botão de leaderboard, muda o estado para leaderboard
                     estado = "leaderboard"
