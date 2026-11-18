@@ -112,7 +112,7 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
 
 
         self.x = 400 # Posicao atual (comeca no topo da torre do meio onde estará o canhão)
-        self.y = 345
+        self.y = 352
         self.destino = destino
         self.velocidade = 8
         self.chegou = False
