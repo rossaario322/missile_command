@@ -8,6 +8,8 @@ import json
 
 pygame.init() # Dependencia obrigatoria
 pygame.mixer.init() # Sistema de áudio do Pygame
+
+
 # ==================== VARIÁVEIS ====================
 
 largura = 820 # Define variaveis que são usadas depois
@@ -17,6 +19,10 @@ hora_sem_municao = 0 # Variavel que guarda quando não tem munição
 fonte = pygame.font.Font("fonts/PressStart2P.ttf", 16) # Fonte pixelada (Press Start 2P), tamanho 16
 fonte_pequena = pygame.font.Font("fonts/PressStart2P.ttf", 8) # Mesma fonte, menor, pra textos de apoio
 estado = "menu" # Define o estado do jogo, que começa no menu
+tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
+clock = pygame.time.Clock() # Confirgurando os fps
+
+# ==================== SONS ====================
 
 somExplosao = pygame.mixer.Sound("audios/explosao_missil.wav")
 somTiro = pygame.mixer.Sound("audios/tiroProjetil.wav")
@@ -25,11 +31,6 @@ somRecarga = pygame.mixer.Sound("audios/recarga.wav")
 somOndaConcluida = pygame.mixer.Sound("audios/ondaConcluida.wav")
 somBotao = pygame.mixer.Sound("audios/botao.wav")
 somGameOver = pygame.mixer.Sound("audios/GameOver.mp3")
-
-
-
-tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
-clock = pygame.time.Clock() # Confirgurando os fps
 
 # ==================== CLASSES ====================
 
@@ -178,7 +179,7 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
         self.velocidade = velocidade
 
         self.rect.center = (self.origemX, self.origemY)
-
+        self.rastro = [] # Guarda as últimas posições do míssil, pra desenhar a cauda
     def update(self): # Função feita para o jogo ficar atualizando e movendo o projetil ate o local desejado
         dx = self.destinoX - self.origemX
         dy = self.destinoY - self.origemY
@@ -197,7 +198,9 @@ class Missil(pygame.sprite.Sprite): #transformando o missil em sprite
                 self.origemY += direcaoY*self.velocidade
 
         self.rect.center = (int(self.origemX), int(self.origemY))
-
+        self.rastro.append(self.rect.center) # Anota onde ele está agora
+        if len(self.rastro) > 25:            # Guarda só as 25 últimas posições
+            self.rastro.pop(0)               # Tira a mais antiga (a do começo da lista)
 class Boss(pygame.sprite.Sprite): # Base dos bosses: cai em direção a uma casa
     def __init__(self, imagem, velocidade): # Cria a classe Boss, que é um sprite, recebe a imagem e a velocidade
         super().__init__() #  Garante que a classe mãe seja "vista"
@@ -267,9 +270,13 @@ class Boss2(Boss):
             return True
         return False
 
+# ==================== BOTÕES ====================
+
 botao_jogar = Botao(290, 150, pygame.image.load("img/botao_jogar.png"), pygame.image.load("img/botao_jogar_hover.png")) # Os botões do menu, com a posição e as imagens
 botao_lederbord = Botao(290, 220, pygame.image.load("img/botao_leaderboard.png"), pygame.image.load("img/botao_leaderboard_hover.png"))
 botao_sair = Botao(290, 290, pygame.image.load("img/botao_sair.png"), pygame.image.load("img/botao_sair_hover.png"))
+
+# ==================== IMAGENS CARREGADAS ====================
 
 img_nuvem = pygame.image.load("img/nuvem.png").convert_alpha() # As imagens da nuvem e das estrelas do mapa
 img_estrela = pygame.image.load("img/estrela.png").convert_alpha()
@@ -281,10 +288,23 @@ img_sol = pygame.image.load("img/sol.png").convert_alpha()
 img_lua = pygame.image.load("img/lua.png").convert_alpha()
 img_municao = pygame.image.load("img/municao.png").convert_alpha()
 
+
+# ==================== POSIÇÕES ====================
+
 estrelas_grandes = [(150, 60), (480, 40), (620, 150)] # Posições das estrelas grandes e pequenas, e das montanhas para desenhar no mapa
 estrelas_pequenas = [(60, 120), (260, 30), (330, 140), (420, 90), (560, 200), (760, 60), (210, 210)]
 montanhas = [(0, 480), (0, 300), (80, 250), (160, 310), (250, 230), (340, 300), (420, 260), (500, 320), (590, 240), (680, 300), (760, 250), (820, 290), (820, 480)]
-# ==================== ELEMENTOS DO MAPA ====================
+
+posicoes_fixas = [
+    (115, 400),
+    (205, 400),
+    (295, 400),
+    (515, 400),
+    (605, 400),
+    (695, 400)
+]
+
+# ==================== FUNÇÕES ====================
 
 def chao(): # Desenha o chão, a torre do meio e os blocos dos lados, com cores diferentes de dia e de noite
     if dia == 1:
@@ -308,7 +328,6 @@ def escolher_alvo(): # Sorteia uma cidade viva e mira no meio dela
     if len(alvos) == 0: # Nenhuma viva: devolve None pra não dar erro no random.choice
         return None
     return random.choice(alvos)
-
 
 def desenhar_municao(): # Desenha os mísseis em pirâmide embaixo da torre
     posicoes = []
@@ -478,20 +497,11 @@ def desenhar_canhao(): # Torreta em degraus em cima da torre, com o cano apontan
     pygame.draw.rect(tela, (70, 80, 115), (391, 356, 18, 6))    # Degrau de cima
     pygame.draw.rect(tela, (110, 120, 160), (391, 356, 18, 2))
 
+# ==================== ATIVANDO FUNÇÕES ====================
+
 dia, temperatura, chovendo, online = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 fator_clima = calcular_fator_clima(temperatura) # Multiplicador da velocidade dos mísseis
 gotas = criar_chuva()
-# ==================== POSIÇÕES E O RANKING ====================
-
-posicoes_fixas = [
-    (115, 400),
-    (205, 400),
-    (295, 400),
-    (515, 400),
-    (605, 400),
-    (695, 400)
-]
-
 ranking = carregar_ranking()
 
 # ==================== GRUPOS DE SPRITES ====================
@@ -503,6 +513,7 @@ grupo_boss = pygame.sprite.Group()
 grupo_efeitos = pygame.sprite.Group() # Explosões só de enfeite (não destroem mísseis nem dão pontos)
 
 # ==================== VARIÁVEIS DA PARTIDA ====================
+
 # As variáveis das ondas, dos pontos e do game over são criadas aqui pelo resetarJogo()
 resetarJogo()
 
@@ -676,8 +687,10 @@ while True:  # O loop que deixa o jogo rodando para sempre
                 esperandoProximaOnda = False
 
         # ---------- DESENHO DA PARTIDA (aparece até atrás do game over) ----------
-        for missil in grupo_misseis: # O rastro dos misseis
-            pygame.draw.line(tela, "white", (missil.spawnX, missil.spawnY), missil.rect.center, 2)
+        for missil in grupo_misseis: # Cauda de fogo: escura no fim, clara perto do míssil
+            for i in range(1, len(missil.rastro)):
+                brilho = int(255 * i / len(missil.rastro)) # Cresce de 0 até 255 conforme chega perto do míssil
+                pygame.draw.line(tela, (brilho, brilho // 3, 0), missil.rastro[i - 1], missil.rastro[i], 3)
 
         grupo_casas.draw(tela)  # Desenha tudo na tela
         grupo_projeteis.draw(tela)
@@ -754,8 +767,6 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
     elif estado == "leaderboard": # Se o estado for leaderboard, desenha o ranking na tela
         desenhar_ceu()
-        
-
         painel = pygame.Surface((560, 410)) # Cria um retângulo do tamanho do painel
         painel.set_alpha(180) # Deixa ele meio transparente (0 = invisível, 255 = sólido)
         painel.fill((0, 0, 0)) # Pinta de preto
