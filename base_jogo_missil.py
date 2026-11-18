@@ -237,8 +237,39 @@ def chao():
     pygame.draw.rect(tela, (179, 128, 0), (780, 365, 50, 50))  # Blocos dos lados 
     torre_do_meio1 = pygame.draw.rect(tela, (179, 128, 0), (350, 390, 100, 20)) # Os 3 para a torre do meio
     torre_do_meio2 = pygame.draw.rect(tela, (179, 128, 0), (365, 380, 70, 20)) 
-    torre_do_meio3 = pygame.draw.rect(tela, (179, 128, 0), (380, 370, 40, 20)) 
+    torre_do_meio3 = pygame.draw.rect(tela, (179, 128, 0), (380, 370, 40, 20))
 
+def desenhar_canhao():
+    
+    baseX = 400 #posicionamento do canhao
+    baseY = 375
+    comprimentoCanhao = 30
+    mouseX, mouseY = pygame.mouse.get_pos()
+    
+    if mouseY > 370: #para o canhão não mirar pra dentro do chao
+        mouseY = 370
+    
+    dx = mouseX - baseX #mesma lógica de calculo do missil
+    dy = mouseY - baseY
+    distancia = math.hypot(dx, dy)
+
+    if distancia == 0: #aponta o canhao pra cima se o mouse estiver muito perto da base
+        direcaoX = 0
+        direcaoY = 1
+    else:
+        direcaoX = dx / distancia
+        direcaoY = dy / distancia
+    
+    # Calcula onde esta a ponta do canhao
+    pontaX = baseX + direcaoX * comprimentoCanhao
+    pontaY = baseY + direcaoY * comprimentoCanhao
+    
+    # Desenha a articulação redonda e o tubo do canhão
+    pygame.draw.circle(tela, (120, 120, 120), (baseX, baseY), 12)
+    pygame.draw.line(tela, (90, 90, 90), (baseX, baseY), (pontaX, pontaY), 10)
+    pygame.draw.line(tela, (150, 150, 150), (baseX, baseY), (pontaX, pontaY), 4) # Brilho interno do canhao
+
+    return (pontaX, pontaY)
 
 def buscar_clima(): # Consulta a API do clima e devolve se é dia e a temperatura de Curitiba
     url = "https://api.open-meteo.com/v1/forecast?latitude=-25.43&longitude=-49.27&current=temperature_2m,is_day"
@@ -440,6 +471,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
     elif estado == "jogando": # Todo o resto do código é o que acontece quando está jogando
         
         desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
+        ponta_canhao = desenhar_canhao() #desenha o canhao antes do chao pra parecer que ele esta saindo de dentro do chao mesmo
         chao() # Puxa a função que faz o ambiente do mapa
         
         if not gameOver and not digitarNome:    
