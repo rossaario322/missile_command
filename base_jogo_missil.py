@@ -1,4 +1,7 @@
 
+# ==================== Iniciando Código ====================
+
+
 import pygame # Pygame, atalhos do pygame, função de sair, math (raiz quadrada), e requests (para pegar a API do clima)
 from pygame.locals import * 
 from sys import exit
@@ -10,21 +13,47 @@ import json
 pygame.init() # Dependencia obrigatoria
 pygame.mixer.init() #Sistema de audio do Pygame
 
-# ==================== ARQUIVOS DE AUDIO ====================
-
-#somGameOver = pygame.mixer.Sound('audio/perdeu.wav') #mexer aqui .wav ou .ogg
-
-# ==================== VARIÁVEIS ====================
+# ==================== Constantes ====================
 
 largura = 820 # Define variaveis que são usadas depois
 altura = 480
-municao = 10
-hora_sem_municao = 0 # Variavel que guarda quando não tem munição
-fonte = pygame.font.SysFont("arial", 24, True) # Fonte pra escrever (arial, tamanho 24, negrito)
-estado = "menu" # Define o estado do jogo, que começa no menu
+
+posicoes_fixas = [ # A posição das casas
+    (100, 370),
+    (190, 370),
+    (280, 370),
+    (500, 370),
+    (590, 370),
+    (680, 370)
+]
+
+estrelas_grandes = [(150, 60), (480, 40), (620, 150)] # Posições das estrelas grandes e pequenas, para desenhar no mapa
+estrelas_pequenas = [(60, 120), (260, 30), (330, 140), (420, 90), (560, 200), (760, 60), (210, 210)]
 
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
 clock = pygame.time.Clock() # Confirgurando os fps
+fonte = pygame.font.SysFont("arial", 24, True) # Fonte pra escrever (arial, tamanho 24, negrito)
+
+# ==================== Assets Audio ====================
+
+somExplosao = pygame.mixer.Sound('audios/explosao_missil.wav')
+somTiro = pygame.mixer.Sound('audios/tiroProjetil.wav')
+somSemMunicao = pygame.mixer.Sound('audios/semMunicao.wav')
+somCasaDestruida = pygame.mixer.Sound('audios/casaDestruida.wav')
+somRecarga = pygame.mixer.Sound('audios/recarga.wav')
+somOndaConcluida = pygame.mixer.Sound('audios/ondaConcluida.wav')
+somBotao = pygame.mixer.Sound('audios/botao.wav')
+somGameOver = pygame.mixer.Sound('audios/GameOver.mp3')
+
+# ==================== VARIÁVEIS ====================
+
+
+municao = 10
+hora_sem_municao = 0 # Variavel que guarda quando não tem munição
+
+estado = "menu" # Define o estado do jogo, que começa no menu
+
+
 
 # ==================== CLASSES ====================
 
@@ -200,8 +229,7 @@ img_estrela_pequena = pygame.image.load("img/estrela_pequena.png").convert_alpha
 
 
 
-estrelas_grandes = [(150, 60), (480, 40), (620, 150)] # Posições das estrelas grandes e pequenas, para desenhar no mapa
-estrelas_pequenas = [(60, 120), (260, 30), (330, 140), (420, 90), (560, 200), (760, 60), (210, 210)]
+
 # ==================== ELEMENTOS DO MAPA ====================
 def chao():
     pygame.draw.rect(tela, (179, 128, 0), (-40, 400, 860, 300)) # Está desenhando o chão retangulo (rect) laranja, com o primeiro parametro que é a tela, o segundo é a cor, e o terceiro é a posição
@@ -305,14 +333,7 @@ def salvar_pontuacao(nome, pontos): # Coloca a pontuação nova no ranking e sal
 dia, temperatura = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 # ==================== POSIÇÕES E O RANKING ====================
 
-posicoes_fixas = [ # A posição das casas
-    (100, 370),
-    (190, 370),
-    (280, 370),
-    (500, 370),
-    (590, 370),
-    (680, 370)
-]
+
 
 ranking = carregar_ranking()
 
@@ -355,6 +376,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
             if event.button == 1:
                 if gameOver: #Se game over for true
                     if botaoAvancar.collidepoint(event.pos):
+                        somBotao.play()
                         gameOver = False
                         digitarNome = True
         
@@ -380,9 +402,11 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if estado == "menu": # No menu, o clique só serve pro botão
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if botao_jogar.clicado(event.pos): # Se clicar no botão de jogar, muda o estado para jogando
+                    somBotao.play()
                     resetarJogo()
                     estado = "jogando"
                 if botao_lederbord.clicado(event.pos): # Se clicar no botão de leaderboard, muda o estado para leaderboard
+                    somBotao.play()
                     estado = "leaderboard"
                 if botao_sair.clicado(event.pos): # Se clicar no botão de sair, sai do jogo
                     pygame.quit()
@@ -391,6 +415,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
         elif estado == "jogando": # Jogando, o clique atira
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if municao > 0: # Cada tiro gasta 1 de munição
+                    somTiro.play()
                     grupo_projeteis.add(Projetil(event.pos))
                     municao -= 1
                     if municao == 0: # Quando a última bala é gasta, anota a hora. É aqui que o cronômetro começa.
@@ -437,6 +462,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
             for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
                 if p.chegou:
+                    somExplosao.play()
                     grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
                     p.kill()
 
@@ -449,11 +475,13 @@ while True:  # O loop que deixa o jogo rodando para sempre
             colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False)
             for missil_atingiu, casas_atingidas in colisoes.items():
                 for casa in casas_atingidas:
-                    if casa.viva: 
+                    if casa.viva:
+                        somCasaDestruida.play() 
                         casa.destruir()
 
             if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Aqui ele pega o tempo que tem de jogo, e diminui pelo tempo que tinha de jogo e que foi marcado, fazendo verificar se ja passaram 3000 milisengundos para voltar a munição
                 municao = 10
+                somRecarga.play()
 
             textoOndaAtual = fonte.render(f"Onda Atual: {ondaAtual}", True, (255, 255, 255))
             tela.blit(textoOndaAtual, (20,50)) #posiciona o texto no canto superior esquerdo (x = 10, y = 10)
@@ -484,8 +512,9 @@ while True:  # O loop que deixa o jogo rodando para sempre
                 
                 if casasVivas == 0:
                     gameOver =  True
-                    #somGameOver.play()
-                else:  
+                    somGameOver.play()
+                else: 
+                    somOndaConcluida.play() 
                     pontos += casasVivas * 100 
                     esperandoProximaOnda = True
                     tempoEspera = tempoAtual
@@ -579,4 +608,5 @@ while True:  # O loop que deixa o jogo rodando para sempre
         tela.blit(dica, dica.get_rect(center=(410, 280)))
         
     pygame.display.update() # Usado para atualizar novas coisas
-    clock.tick(40) # Quantidade de FPS
+    clock.tick(60) # Quantidade de FPS
+
