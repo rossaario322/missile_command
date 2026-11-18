@@ -298,6 +298,16 @@ def chao(): # Desenha o chão, a torre do meio e os blocos dos lados, com cores 
     pygame.draw.rect(tela, cor, (365, 380, 70, 20))
     pygame.draw.rect(tela, cor, (380, 370, 40, 20))
 
+def escolher_alvo(): # Sorteia uma cidade viva e mira no meio dela
+    alvos = []
+    for casa in grupo_casas:
+        if casa.viva:
+            alvos.append((casa.rect.centerx, 388)) # 388 = meio da cidade (o chão fica em 400)
+    if len(alvos) == 0: # Nenhuma viva: devolve None pra não dar erro no random.choice
+        return None
+    return random.choice(alvos)
+
+
 def desenhar_municao(): # Desenha os mísseis em pirâmide embaixo da torre
     posicoes = []
     for linha in range(4):                      # Linha 0 = base (4 mísseis) ... linha 3 = topo (1)
@@ -606,7 +616,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                         missil.kill()
                         pontos += 25 # Soma 25 pontos por missil destruido
 
-            colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False) # Testa todos os misseis contra todas as casas; o missil que encostar some (True), a casa continua (False)
+            colisoes = pygame.sprite.groupcollide(grupo_misseis, grupo_casas, True, False, pygame.sprite.collide_rect_ratio(0.4)) # Testa todos os misseis contra todas as casas; o missil que encostar some (True), a casa continua (False)
             for missil_atingiu, casas_atingidas in colisoes.items():
                 for casa in casas_atingidas:
                     if casa.viva:
@@ -629,9 +639,10 @@ while True:  # O loop que deixa o jogo rodando para sempre
             if misseisRestantes > 0:
                 if tempoAtual - ultimoSpawn >= SpawnTime: # verifica se ja passou o tempo entre misseis
                     origemX = random.randint(0, largura)
-                    destino = random.choice(posicoes_fixas)
-                    novoMissil = Missil(origemX, 0, destino, misseisVelocidade)
-                    grupo_misseis.add(novoMissil)
+                    destino = escolher_alvo()
+                    if destino != None: # Só cria o míssil se ainda tem cidade viva
+                        novoMissil = Missil(origemX, 0, destino, misseisVelocidade)
+                        grupo_misseis.add(novoMissil)
                     misseisRestantes -= 1
                     ultimoSpawn = tempoAtual
 
