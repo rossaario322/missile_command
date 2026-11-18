@@ -7,7 +7,7 @@ import random
 import json
 
 pygame.init() # Dependencia obrigatoria
-
+pygame.mixer.init() # Sistema de áudio do Pygame
 # ==================== VARIÁVEIS ====================
 
 largura = 820 # Define variaveis que são usadas depois
@@ -17,6 +17,16 @@ hora_sem_municao = 0 # Variavel que guarda quando não tem munição
 fonte = pygame.font.Font("fonts/PressStart2P.ttf", 16) # Fonte pixelada (Press Start 2P), tamanho 16
 fonte_pequena = pygame.font.Font("fonts/PressStart2P.ttf", 8) # Mesma fonte, menor, pra textos de apoio
 estado = "menu" # Define o estado do jogo, que começa no menu
+
+somExplosao = pygame.mixer.Sound("audios/explosao_missil.wav")
+somTiro = pygame.mixer.Sound("audios/tiroProjetil.wav")
+somCasaDestruida = pygame.mixer.Sound("audios/casaDestruida.wav")
+somRecarga = pygame.mixer.Sound("audios/recarga.wav")
+somOndaConcluida = pygame.mixer.Sound("audios/ondaConcluida.wav")
+somBotao = pygame.mixer.Sound("audios/botao.wav")
+somGameOver = pygame.mixer.Sound("audios/GameOver.mp3")
+
+
 
 tela = pygame.display.set_mode((largura, altura)) # Tamanho da tela
 clock = pygame.time.Clock() # Confirgurando os fps
@@ -431,6 +441,28 @@ def resetarJogo(): # Volta tudo pro começo, pra começar uma partida nova
         nova_casa = Casa(pos, "img/cidade.png")
         grupo_casas.add(nova_casa)
 
+def desenhar_canhao(): # Desenha o canhão apontando pro mouse
+    baseX = 400
+    baseY = 375
+    comprimentoCanhao = 30
+    mouseX, mouseY = pygame.mouse.get_pos()
+
+    if mouseY > 370: # Não deixa o canhão mirar pra dentro do chão
+        mouseY = 370
+
+    dx = mouseX - baseX # Mesma lógica de direção do míssil
+    dy = mouseY - baseY
+    distancia = math.hypot(dx, dy)
+    direcaoX = dx / distancia
+    direcaoY = dy / distancia
+
+    pontaX = baseX + direcaoX * comprimentoCanhao # Onde fica a ponta do cano
+    pontaY = baseY + direcaoY * comprimentoCanhao
+
+    pygame.draw.circle(tela, (120, 120, 120), (baseX, baseY), 12)                 # Articulação
+    pygame.draw.line(tela, (90, 90, 90), (baseX, baseY), (pontaX, pontaY), 10)    # Cano
+    pygame.draw.line(tela, (150, 150, 150), (baseX, baseY), (pontaX, pontaY), 4)  # Brilho
+
 dia, temperatura, chovendo, online = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 fator_clima = calcular_fator_clima(temperatura) # Multiplicador da velocidade dos mísseis
 gotas = criar_chuva()
@@ -472,11 +504,14 @@ while True:  # O loop que deixa o jogo rodando para sempre
         if estado == "menu": # No menu, o clique só serve pro botão
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if botao_jogar.clicado(event.pos): # Se clicar no botão de jogar, começa uma partida nova
+                    somBotao.play()
                     resetarJogo()
                     estado = "jogando"
                 if botao_lederbord.clicado(event.pos): # Se clicar no botão de leaderboard, muda o estado para leaderboard
+                    somBotao.play()
                     estado = "leaderboard"
                 if botao_sair.clicado(event.pos): # Se clicar no botão de sair, sai do jogo
+                    somBotao.play()
                     pygame.quit()
                     exit()
 
@@ -484,6 +519,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
             if gameOver: # Tela de game over: o clique só serve pro botão Avançar
                 if event.type == MOUSEBUTTONUP and event.button == 1:
                     if botaoAvancar.collidepoint(event.pos):
+                        somBotao.play()
                         gameOver = False
                         digitarNome = True
 
@@ -503,6 +539,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                 if event.type == MOUSEBUTTONUP and event.button == 1:
                     if municao > 0: # Cada tiro gasta 1 de munição
                         grupo_projeteis.add(Projetil(event.pos))
+                        somTiro.play()
                         municao -= 1
                         if municao == 0: # Quando a última bala é gasta, anota a hora. É aqui que o cronômetro começa.
                             hora_sem_municao = pygame.time.get_ticks()
@@ -529,7 +566,10 @@ while True:  # O loop que deixa o jogo rodando para sempre
     elif estado == "jogando": # Todo o resto do código é o que acontece quando está jogando
 
         desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
+        desenhar_canhao() # Puxa a função que desenha o canhão apontando pro mouse
+        desenhar_municao() # Puxa a função que desenha os mísse
         chao() # Puxa a função que faz o ambiente do mapa
+       
         grupo_casas.update() # As casas animam sempre, pra explosão da última cidade aparecer mesmo no game over
         grupo_explosoes.update()
 
@@ -556,6 +596,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
             for p in grupo_projeteis: # Transforma o tiro em explosão, apagando o disparo e posicionando a explosão
                 if p.chegou:
+                    somExplosao.play()
                     grupo_explosoes.add(Explosao(p.destino[0], p.destino[1]))
                     p.kill()
 
@@ -569,6 +610,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
             for missil_atingiu, casas_atingidas in colisoes.items():
                 for casa in casas_atingidas:
                     if casa.viva:
+                        somCasaDestruida.play()
                         casa.destruir()
 
             casasVivas = 0 # Conta quantas casas ainda estão vivas
@@ -577,9 +619,11 @@ while True:  # O loop que deixa o jogo rodando para sempre
                     casasVivas += 1
             if casasVivas == 0: # Todas as cidades destruídas: fim de jogo
                 gameOver = True
+                somGameOver.play()
 
             if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Confere a cada foto se ja passaram 3 segundos desde que a munição acabou
                 municao = 10
+                somRecarga.play()
 
             tempoAtual = pygame.time.get_ticks() #variavel que salva o tempo atual
             if misseisRestantes > 0:
@@ -593,6 +637,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
             elif len(grupo_misseis) == 0 and len(grupo_boss) == 0 and misseisRestantes == 0 and not esperandoProximaOnda:
                 pontos += casasVivas * 100 # Bônus: 100 pontos por cidade que sobreviveu à onda
+                somOndaConcluida.play()
                 esperandoProximaOnda = True
                 tempoEspera = tempoAtual
 
