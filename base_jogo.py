@@ -732,19 +732,33 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
     elif estado == "leaderboard": # Se o estado for leaderboard, desenha o ranking na tela
         desenhar_ceu()
-        titulo = fonte.render("LEADERBOARD", False, (255, 0, 0))
-        tela.blit(titulo, titulo.get_rect(center=(410, 80)))
+        
 
+        painel = pygame.Surface((560, 410)) # Cria um retângulo do tamanho do painel
+        painel.set_alpha(180) # Deixa ele meio transparente (0 = invisível, 255 = sólido)
+        painel.fill((0, 0, 0)) # Pinta de preto
+        rect_painel = painel.get_rect(center=(410, 255)) # Centraliza atrás do ranking
+        tela.blit(painel, rect_painel) # Desenha o painel
+        pygame.draw.rect(tela, (0, 220, 255), rect_painel, 2) # Borda ciano, igual aos botões
+        
+        titulo = fonte.render("LEADERBOARD", False, (255, 40, 40))
+        tela.blit(titulo, titulo.get_rect(center=(410, 80)))
         y = 130
         posicao = 1
         for jogador in ranking:   # cada jogador é um dicionário, ex.: {"nome": "Victor", "pontos": 1200}
-            linha = fonte.render(f"{posicao}. {jogador['nome']}   {jogador['pontos']}", False, (255, 255, 255))
+            if posicao == 1:
+                cor = (255, 220, 60)  # 1º lugar em amarelo
+            else:
+                cor = (255, 150, 150)
+            linha = fonte.render(f"{posicao}. {jogador['nome']}   {jogador['pontos']}", False, cor)
             tela.blit(linha, linha.get_rect(center=(410, y)))
             y += 28
             posicao += 1
 
         dica = fonte.render("ESC para voltar", False, (150, 150, 150))
         tela.blit(dica, dica.get_rect(center=(410, 440)))
+        
+
 
     elif estado == "pausado": # Se o jogo estiver pausado, desenha o texto de pausa e fica em uma tela que so é possivel sair apertando ESC
         desenhar_ceu()
