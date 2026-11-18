@@ -112,7 +112,7 @@ class Projetil(pygame.sprite.Sprite): # Tiro que sai do canhão e avisa quando c
 
 
         self.x = 400 # Posicao atual (comeca no topo da torre do meio onde estará o canhão)
-        self.y = 370
+        self.y = 345
         self.destino = destino
         self.velocidade = 8
         self.chegou = False
@@ -212,6 +212,8 @@ class Boss(pygame.sprite.Sprite): # Base dos bosses: cai em direção a uma casa
         self.x = random.randint(50, largura - 50)
         self.y = random.randint(20, 120)
         destino = random.choice(posicoes_fixas)
+        if destino == None: # Sem cidade viva: mira no meio do chão
+            destino = (410, 388)
         dx = destino[0] - self.x
         dy = destino[1] - self.y
         distancia = math.sqrt(dx**2 + dy**2)
@@ -392,11 +394,11 @@ def desenhar_ceu(): # Desenha o fundo de dia (sol) ou de noite (lua)
 
 def carregar_ranking(): # Lê o ranking salvo no arquivo
     try:
-        arquivo = open("ranking.json", "r")
+        arquivo = open("ranking.json", "r", encoding="utf-8")  # Existia um erro que deixava o texto estranho, corigido pelo encoding="utf-8"
         ranking = json.load(arquivo)
         arquivo.close()
         return ranking
-    except FileNotFoundError: # Se o arquivo ainda não existe, começa com a lista vazia
+    except (FileNotFoundError, json.JSONDecodeError):    # Se o arquivo ainda não existe, começa com a lista vazia (corrigido o erro de quando o arquivo não tinha nada ele bugadava)
         return []
 
 def pegar_pontos(jogador): # Diz pro sort que é pra comparar pelos pontos
@@ -410,7 +412,7 @@ def salvar_pontuacao(nome, pontos): # Coloca a pontuação nova no ranking e sal
     while len(ranking) > 10: # Deixa só os 10 melhores
         ranking.pop()        # Tira o último da lista
 
-    arquivo = open("ranking.json", "w")
+    arquivo = open("ranking.json", "w", encoding="utf-8")# Existia um erro que deixava o texto estranho, corigido pelo encoding="utf-8"
     json.dump(ranking, arquivo)
     arquivo.close()
     return ranking
@@ -445,33 +447,36 @@ def resetarJogo(): # Volta tudo pro começo, pra começar uma partida nova
     grupo_projeteis.empty()
     grupo_explosoes.empty()
     grupo_boss.empty()
+    grupo_efeitos.empty()
 
     # Reconstrói as casas
     for pos in posicoes_fixas:
         nova_casa = Casa(pos, "img/cidade.png")
         grupo_casas.add(nova_casa)
 
-def desenhar_canhao(): # Desenha o canhão apontando pro mouse
+def desenhar_canhao(): # Torreta em degraus em cima da torre, com o cano apontando pro mouse
     baseX = 400
-    baseY = 375
-    comprimentoCanhao = 30
+    baseY = 362
+    comprimentoCanhao = 22
     mouseX, mouseY = pygame.mouse.get_pos()
 
-    if mouseY > 370: # Não deixa o canhão mirar pra dentro do chão
-        mouseY = 370
+    if mouseY > 352: # Não deixa o cano apontar pra baixo
+        mouseY = 352
 
     dx = mouseX - baseX # Mesma lógica de direção do míssil
     dy = mouseY - baseY
     distancia = math.hypot(dx, dy)
-    direcaoX = dx / distancia
-    direcaoY = dy / distancia
+    pontaX = baseX + dx / distancia * comprimentoCanhao # Onde fica a ponta do cano
+    pontaY = baseY + dy / distancia * comprimentoCanhao
 
-    pontaX = baseX + direcaoX * comprimentoCanhao # Onde fica a ponta do cano
-    pontaY = baseY + direcaoY * comprimentoCanhao
+    pygame.draw.line(tela, (60, 70, 100), (baseX, baseY), (pontaX, pontaY), 8)     # Cano escuro
+    pygame.draw.line(tela, (170, 180, 210), (baseX, baseY), (pontaX, pontaY), 2)   # Brilho no meio do cano
+    pygame.draw.rect(tela, (255, 220, 60), (pontaX - 3, pontaY - 3, 6, 6))         # Ponta amarela
 
-    pygame.draw.circle(tela, (120, 120, 120), (baseX, baseY), 12)                 # Articulação
-    pygame.draw.line(tela, (90, 90, 90), (baseX, baseY), (pontaX, pontaY), 10)    # Cano
-    pygame.draw.line(tela, (150, 150, 150), (baseX, baseY), (pontaX, pontaY), 4)  # Brilho
+    pygame.draw.rect(tela, (70, 80, 115), (386, 362, 28, 8))    # Degrau de baixo da torreta
+    pygame.draw.rect(tela, (110, 120, 160), (386, 362, 28, 2))  # Faixa clara em cima dele
+    pygame.draw.rect(tela, (70, 80, 115), (391, 356, 18, 6))    # Degrau de cima
+    pygame.draw.rect(tela, (110, 120, 160), (391, 356, 18, 2))
 
 dia, temperatura, chovendo, online = buscar_clima() # Chama a API uma vez só, quando o jogo abre
 fator_clima = calcular_fator_clima(temperatura) # Multiplicador da velocidade dos mísseis
@@ -495,6 +500,7 @@ grupo_explosoes = pygame.sprite.Group() # Grupo das explosões
 grupo_projeteis = pygame.sprite.Group() # Grupos dos projeteis
 grupo_misseis = pygame.sprite.Group()
 grupo_boss = pygame.sprite.Group()
+grupo_efeitos = pygame.sprite.Group() # Explosões só de enfeite (não destroem mísseis nem dão pontos)
 
 # ==================== VARIÁVEIS DA PARTIDA ====================
 # As variáveis das ondas, dos pontos e do game over são criadas aqui pelo resetarJogo()
@@ -577,11 +583,11 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
         desenhar_ceu() # Puxa a função que desenha o céu de dia ou de noite
         desenhar_canhao() # Puxa a função que desenha o canhão apontando pro mouse
-        desenhar_municao() # Puxa a função que desenha os mísse
         chao() # Puxa a função que faz o ambiente do mapa
        
         grupo_casas.update() # As casas animam sempre, pra explosão da última cidade aparecer mesmo no game over
         grupo_explosoes.update()
+        grupo_efeitos.update()
 
         if not gameOver and not digitarNome: # Só mexe nas coisas enquanto a partida está rolando
             grupo_projeteis.update()
@@ -590,7 +596,9 @@ while True:  # O loop que deixa o jogo rodando para sempre
 
             for boss in grupo_boss: # Boss que quer atirar solta um míssil
                 if boss.atirar():
-                    grupo_misseis.add(Missil(boss.rect.centerx, boss.rect.bottom, random.choice(posicoes_fixas), misseisVelocidade))
+                    destino = escolher_alvo()
+                    if destino != None:
+                        grupo_misseis.add(Missil(boss.rect.centerx, boss.rect.bottom, destino, misseisVelocidade))
 
             for explosao in grupo_explosoes: # Explosão acertando o boss
                 for boss in grupo_boss:
@@ -622,7 +630,9 @@ while True:  # O loop que deixa o jogo rodando para sempre
                     if casa.viva:
                         somCasaDestruida.play()
                         casa.destruir()
-
+                    else: # Cidade já quebrada: o míssil explode no chão em vez de sumir
+                        grupo_efeitos.add(Explosao(missil_atingiu.rect.centerx, missil_atingiu.rect.centery))
+                        somExplosao.play()
             casasVivas = 0 # Conta quantas casas ainda estão vivas
             for casa in grupo_casas:
                 if casa.viva:
@@ -674,6 +684,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
         grupo_misseis.draw(tela)
         grupo_boss.draw(tela)
         grupo_explosoes.draw(tela)
+        grupo_efeitos.draw(tela)
         desenhar_chuva()
         desenhar_municao()
 
