@@ -58,7 +58,7 @@ Sem internet, o jogo entra no modo simulado (dia, 30 °C e chuva) e mostra "Simu
 ## Arquivos
 
 ```
-base_jogo.py                  código do jogo
+main.py                  código do jogo
 requirements.txt              bibliotecas (pygame e requests)
 ranking.json                  ranking salvo
 MissileCommand_windows.zip    executável
