@@ -33,7 +33,7 @@ python base_jogo.py
 ## O que tem no jogo
 
 - 6 cidades para defender. Se todas forem destruídas, é game over
-- 10 tiros de munição, com recarga automática depois de 3 segundos
+- 10 tiros de munição, com recarga automática depois de 2 segundos
 - Ondas que vão ficando mais difíceis, com mais mísseis e mais rápidos
 - Dois bosses que aparecem a cada 3 ondas, alternando:
   - **Boss 1:** desce em direção a uma cidade, tem 3 vidas e se teleporta quando é atingido

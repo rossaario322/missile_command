@@ -652,7 +652,7 @@ while True:  # O loop que deixa o jogo rodando para sempre
                 gameOver = True
                 somGameOver.play()
 
-            if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 3000: # Confere a cada foto se ja passaram 3 segundos desde que a munição acabou
+            if municao == 0 and pygame.time.get_ticks() - hora_sem_municao >= 2000: # Confere a cada foto se ja passaram 3 segundos desde que a munição acabou
                 municao = 10
                 somRecarga.play()
 
